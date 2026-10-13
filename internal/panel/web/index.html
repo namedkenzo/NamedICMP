@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en" dir="ltr" data-theme="dark">
+<head>
+ <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark light"><meta name="theme-color" content="#0c1015">
+ <title>namedICMP · Network control</title><link rel="icon" type="image/svg+xml" href="/brand.svg"><link rel="stylesheet" href="/app.css"><script src="/app.js" defer></script>
+</head>
+<body>
+ <div id="toast" role="status" aria-live="polite" hidden></div>
+ <section id="login" class="login-screen">
+  <div class="login-art">
+   <div class="art-top"><span class="edition">named / NETWORK CONTROL</span><span class="edition-number">01</span></div>
+   <div class="login-brand"><div class="hero-brandline"><div class="mark"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M11 29V12m0 9c0-12 18-12 18 0v8"/></svg></div><span class="brand-tag">ICMP</span></div><h1 class="wordmark">named<span>.</span></h1><p data-i18n="brandLine">A network. With your name on it.</p></div>
+   <div class="signal-scene" aria-hidden="true">
+    <div class="signal-grid"></div><div class="signal-ring ring-outer"></div><div class="signal-ring ring-middle"></div><div class="signal-ring ring-inner"></div><div class="signal-wave"></div><div class="signal-wave wave-two"></div>
+    <div class="signal-axis axis-horizontal"></div><div class="signal-axis axis-vertical"></div>
+    <div class="signal-core"><svg viewBox="0 0 40 40"><path d="M11 29V12m0 9c0-12 18-12 18 0v8"/></svg></div>
+    <span class="signal-node node-one"></span><span class="signal-node node-two"></span><span class="signal-node node-three"></span><span class="orbit-label label-one">ICMP</span><span class="orbit-label label-two">TCP</span><span class="orbit-label label-three">UDP</span>
+   </div>
+   <div class="art-bottom"><span class="art-line"></span><span data-i18n="independent">Independent ICMP core · User management</span><span class="art-coordinate">N / 001</span></div>
+  </div>
+  <div class="login-side">
+   <div class="preferences"><button class="theme-toggle" type="button"><span data-i18n="lightMode">Light mode</span></button><button class="language-toggle" type="button">فارسی</button></div>
+   <div class="login-form-wrap"><div class="mobile-brand wordmark">named<span>.</span><small>ICMP</small></div><span class="eyebrow" data-i18n="controlPanel">CONTROL PANEL</span><h2 data-i18n="welcome">Welcome back.</h2><p class="muted" data-i18n="signInHint">Sign in to manage your server and connections.</p>
+    <form id="login-form"><label><span data-i18n="username">Username</span><input id="username" name="username" autocomplete="username" maxlength="64" required></label><label><span data-i18n="password">Password</span><input id="password" name="password" type="password" autocomplete="current-password" maxlength="256" required></label><p id="login-error" class="error" role="alert"></p><button class="primary full" id="sign-in" data-i18n="signIn">Sign in →</button></form>
+    <div class="login-note"><span class="connection-symbol" aria-hidden="true"></span><span id="connection-note"></span></div>
+   </div>
+   <div class="login-footer"><span class="footer-brand">namedICMP</span><span>0.2.1 / ALPHA</span></div>
+  </div>
+ </section>
+ <div id="app" hidden>
+  <div id="drawer-overlay" hidden></div>
+  <aside id="sidebar">
+   <a class="brand" href="/" aria-label="namedICMP home"><div class="mark small"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M11 29V12m0 9c0-12 18-12 18 0v8"/></svg></div><div><span class="wordmark">named<span>.</span></span><small>ICMP / CONTROL</small></div></a>
+   <div class="side-caption" data-i18n="workspace">WORKSPACE</div>
+   <nav aria-label="Main navigation"><button data-page="home" class="nav active"><span class="nav-icon" data-icon="home" aria-hidden="true"></span><span data-i18n="home">Home</span></button><button data-page="users" class="nav"><span class="nav-icon" data-icon="users" aria-hidden="true"></span><span data-i18n="users">Users</span><span id="nav-count" class="badge">0</span></button><button data-page="outbounds" class="nav"><span class="nav-icon" data-icon="route" aria-hidden="true"></span><span data-i18n="outbounds">Outbounds</span></button></nav>
+   <div class="sidebar-bottom"><div class="core-state"><span class="dot" id="core-dot"></span><div><strong data-i18n="core">ICMP core</strong><small id="core-state"></small></div><span class="core-glyph" data-icon="activity" aria-hidden="true"></span></div><div class="alpha-label"><span>namedICMP</span><span>0.2.1 / ALPHA</span></div></div>
+  </aside>
+  <div class="main-area">
+   <header><div class="header-start"><button id="hamburger" class="icon-button" aria-label="Open navigation" aria-expanded="false"><span data-icon="menu" aria-hidden="true"></span></button><span class="breadcrumb-root">named</span><span class="breadcrumb-divider">/</span><span id="breadcrumb">Home</span></div><div class="header-actions"><button class="theme-toggle" type="button"><span data-i18n="lightMode">Light mode</span></button><button class="language-toggle" type="button">فارسی</button><span class="header-divider" aria-hidden="true"></span><button id="logout" class="icon-button" data-i18n="logout">Sign out</button></div></header>
+   <main>
+    <section id="page-home" class="page"><div class="page-heading"><div><span class="eyebrow" data-i18n="overview">SERVER OVERVIEW</span><h1 data-i18n="homeTitle">Control, at a glance.</h1><p class="muted" data-i18n="homeHint">Live system health and independent tunnel activity.</p></div><div class="live-label"><span class="dot"></span><span data-i18n="live">Live · Every 5 seconds</span></div></div>
+     <div id="metrics" class="metric-grid"></div>
+     <div class="overview-grid"><article class="card system-card"><div class="card-title"><div class="card-heading"><span class="card-heading-icon" data-icon="server" aria-hidden="true"></span><h2 data-i18n="system">System information</h2></div><span class="chip">SERVER</span></div><dl id="system-info"></dl></article><article class="card network-card"><div class="card-title"><div class="card-heading"><span class="card-heading-icon" data-icon="activity" aria-hidden="true"></span><h2 data-i18n="traffic">Network activity</h2></div><span class="chip" data-i18n="allInterfaces">All interfaces</span></div><div id="network-rates" class="network-rates"></div><div class="sparkline" id="sparkline" aria-hidden="true"></div><p class="muted small-text" data-i18n="networkHint">Server interface traffic includes services outside namedICMP.</p></article></div>
+     <article class="card tunnel-card"><div class="tunnel-heading"><div class="tunnel-emblem" data-icon="signal" aria-hidden="true"></div><div><h2 data-i18n="tunnels">Tunnel health</h2><p class="muted" data-i18n="tunnelsHint">User changes apply live. Retransmissions do not count twice.</p></div></div><div id="tunnel-info" class="tunnel-info"></div></article>
+    </section>
+    <section id="page-users" class="page" hidden><div class="page-heading"><div><span class="eyebrow" data-i18n="access">ACCESS & ACCOUNTING</span><h1 data-i18n="users">Users</h1><p class="muted" data-i18n="userHint">A separate key, expiry and traffic allowance for every user.</p></div><button id="add-user" class="primary" data-i18n="addUser">+ Add user</button></div><div class="card table-card"><div class="table-toolbar"><div class="search-field"><span data-icon="search" aria-hidden="true"></span><input id="search-users" type="search" aria-label="Search users" data-placeholder="searchUsers" placeholder="Search users…"></div><span id="user-total" class="muted"></span></div><div class="table-scroll"><table><thead><tr><th data-i18n="name">Name</th><th data-i18n="status">Status</th><th data-i18n="usage">Usage</th><th data-i18n="expiry">Expiry</th><th data-i18n="outbound">Outbound</th><th data-i18n="actions">Actions</th></tr></thead><tbody id="users-body"></tbody></table></div><div id="users-empty" class="empty" hidden><div class="empty-icon" data-icon="users" aria-hidden="true"></div><h2 data-i18n="noUsers">Your first connection starts here.</h2><p class="muted" data-i18n="noUsersHint">Add a user to generate an independent connection key.</p><button class="primary" id="empty-add-user" data-i18n="addUser">+ Add user</button></div></div></section>
+    <section id="page-outbounds" class="page" hidden><div class="page-heading"><div><span class="eyebrow" data-i18n="routing">EGRESS ROUTING</span><h1 data-i18n="outbounds">Outbounds</h1><p class="muted" data-i18n="outboundHint">Assign a direct connection or proxy to each user.</p></div><button id="add-outbound" class="primary" data-i18n="addOutbound">+ Add outbound</button></div><div id="outbound-cards" class="outbound-grid"></div><p class="notice" data-i18n="outboundNote">SOCKS5 supports TCP and UDP if the proxy offers UDP ASSOCIATE. HTTP CONNECT supports TCP. Changes apply to new connections.</p></section>
+   </main>
+   <footer><span class="footer-brand">named<span>.</span><small>ICMP</small></span><span id="last-updated"></span></footer>
+  </div>
+ </div>
+ <dialog id="editor"><form id="editor-form"><div class="dialog-heading"><div class="dialog-title-group"><span class="dialog-emblem" data-icon="sliders" aria-hidden="true"></span><h2 id="editor-title"></h2></div><button id="close-editor" type="button" class="icon-button" aria-label="Close"><span data-icon="close" aria-hidden="true"></span></button></div><div id="editor-fields"></div><p id="editor-error" class="error" role="alert"></p><div class="dialog-actions"><button type="button" id="cancel-editor" data-i18n="cancel">Cancel</button><button id="save-editor" class="primary" data-i18n="save">Save</button></div></form></dialog>
+</body>
+</html>

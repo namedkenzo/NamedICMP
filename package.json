@@ -1,0 +1,16 @@
+{
+  "name": "namedicmp-development-tests",
+  "version": "0.2.1-alpha",
+  "private": true,
+  "description": "Optional DOM smoke tests; Node is not needed to run the panel",
+  "scripts": {
+    "test:ui": "node scripts/ui_smoke.cjs"
+  },
+  "devDependencies": {
+    "jsdom": "26.1.0"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT"
+}

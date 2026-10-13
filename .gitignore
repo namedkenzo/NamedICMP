@@ -1,0 +1,11 @@
+/bin/
+/dist/
+*.db
+*.db.lock
+*.tmp
+config.json
+state.json
+*.pem
+*.key
+coverage.out
+/node_modules/
