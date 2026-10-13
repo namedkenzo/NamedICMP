@@ -17,8 +17,7 @@ bash <(curl -fsSL https://raw.githubusercontent.com/namedkenzo/namedICMP/main/in
 
 ---
 
-## ❤️ دونیت
+## ❤️ Donate
 
-- **TRX (Tron):** `TYbWTzdjVM3HpqkGiUX7GGV2XgK6QDJQis`
-- **TON:** `UQDPGgQWQb9j8pxC5_RIh2HbuTJjaIYSga7FXPLZWbyzTZJN`
----
+· TRX (Tron): TYbWTzdjVM3HpqkGiUX7GGV2XgK6QDJQis
+· TON: UQDPGgQWQb9j8pxC5_RIh2HbuTJjaIYSga7FXPLZWbyzTZJN
