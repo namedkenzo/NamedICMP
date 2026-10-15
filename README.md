@@ -21,3 +21,11 @@ bash <(curl -fsSL https://raw.githubusercontent.com/namedkenzo/namedICMP/main/in
 
 - **TRX (Tron):** `TYbWTzdjVM3HpqkGiUX7GGV2XgK6QDJQis`
 - **TON:** `UQDPGgQWQb9j8pxC5_RIh2HbuTJjaIYSga7FXPLZWbyzTZJN`
+
+Android, windows and Linux clients:
+
+https://github.com/itismoej/pingtunnel-client/releases/tag/0.7.0
+
+iOS client:
+
+https://apps.apple.com/us/app/ping-tunnel-vpn-over-icmp/id6748279683
