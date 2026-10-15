@@ -1,28 +1,32 @@
-# namedICMP
+#namedICMP
 
-**پنل مدیریت کاربران و هستهٔ مستقل TCP/UDP over ICMP، نوشته‌شده با Go.**
+پنل مدیریت کاربران و هستهٔ مستقل TCP/UDP over ICMP، نوشته‌شده با Go.
 
-نسخهٔ **0.2.1-alpha** — با تم اختصاصی، حالت تیره/روشن، انیمیشن‌های سبک، و رمزنگاری اختیاری. 
-> ⚠️ این پروژه از کد، باینری یا اینستالر PingTunnel و سایر پروژه ها استفاده نمی‌کند. قرارداد پیام‌های شبکه برای سازگاری حفظ شده، اما پیاده‌سازی کاملاً از نو نوشته شده است.
+نسخهٔ 0.2.1-alpha با تم اختصاصی، حالت تیره و روشن، انیمیشن‌های سبک و رمزنگاری اختیاری.
+
+«⚠️ این پروژه از کد، باینری یا نصب‌کنندهٔ PingTunnel و سایر پروژه‌ها استفاده نمی‌کند. قرارداد پیام‌های شبکه برای سازگاری حفظ شده، اما پیاده‌سازی کاملاً از ابتدا نوشته شده است.»
 
 ---
 
-## ⚡ نصب (One-Click Installation)
+⚡ نصب (One-Click Installation)
 
-سریع‌ترین راه برای نصب، اجرای دستور زیر در ترمینال سرور (با دسترسی root) است. این دستور اسکریپت نصب را مستقیماً از مخزن گیت‌هاب دریافت و اجرا می‌کند:
+برای نصب سریع، دستور زیر را با دسترسی root در ترمینال سرور اجرا کنید:
 
-```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/namedkenzo/namedICMP/main/install.sh)
-```
-Android, windows and Linux clients:
+
+📱 کلاینت‌ها
+
+Android، Windows و Linux:
+
 https://github.com/itismoej/pingtunnel-client/releases/tag/0.7.0
 
-iOS client:
+iOS:
+
 https://apps.apple.com/us/app/ping-tunnel-vpn-over-icmp/id6748279683
 
 ---
 
-## ❤️ Donate 
+❤️ حمایت مالی (Donate)
 
-- **TRX (Tron):** `TYbWTzdjVM3HpqkGiUX7GGV2XgK6QDJQis`
-- **TON:** `UQDPGgQWQb9j8pxC5_RIh2HbuTJjaIYSga7FXPLZWbyzTZJN`
+- TRX (Tron): "TYbWTzdjVM3HpqkGiUX7GGV2XgK6QDJQis"
+- TON: "UQDPGgQWQb9j8pxC5_RIh2HbuTJjaIYSga7FXPLZWbyzTZJN"
