@@ -2,7 +2,7 @@ namedICMP
 
 پنل مدیریت کاربران و هستهٔ مستقل TCP/UDP over ICMP، نوشته‌شده با Go.
 
-نسخهٔ 0.2.1-alpha — با تم اختصاصی، حالت تیره/روشن، انیمیشن‌های سبک و رمزنگاری اختیاری.
+نسخهٔ 0.2.1-alpha — با تم اختصاصی، حالت تیره/روشن، انیمیشن‌های سبک، و رمزنگاری اختیاری.
 
 «⚠️ این پروژه از کد، باینری یا اینستالر PingTunnel و سایر پروژه‌ها استفاده نمی‌کند. قرارداد پیام‌های شبکه برای سازگاری حفظ شده، اما پیاده‌سازی کاملاً از نو نوشته شده است.»
 
@@ -10,15 +10,15 @@ namedICMP
 
 ⚡ نصب (One-Click Installation)
 
-سریع‌ترین راه نصب، اجرای دستور زیر در ترمینال سرور با دسترسی root است:
+سریع‌ترین راه برای نصب، اجرای دستور زیر در ترمینال سرور (با دسترسی root) است. این دستور اسکریپت نصب را مستقیماً از مخزن گیت‌هاب دریافت و اجرا می‌کند:
 
 bash <(curl -fsSL https://raw.githubusercontent.com/namedkenzo/namedICMP/main/install.sh)
 
-Android, Windows and Linux clients
+Android, windows and Linux clients:
 
 https://github.com/itismoej/pingtunnel-client/releases/tag/0.7.0
 
-iOS client
+iOS client:
 
 https://apps.apple.com/us/app/ping-tunnel-vpn-over-icmp/id6748279683
 
