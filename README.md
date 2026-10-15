@@ -14,7 +14,6 @@
 
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/namedkenzo/namedICMP/main/install.sh)
-
 ```
 
 ### Android, Windows and Linux clients
