@@ -1,3 +1,32 @@
+# Verification report — 0.2.2-alpha
+
+Prepared 2026-10-21. Baseline repository commit: `ab2a4f2`.
+Toolchain: Go 1.27.3, Linux amd64. This section records checks actually run
+for this change; earlier reports below describe earlier versions.
+
+| Check | Result |
+| --- | --- |
+| `go test -race ./...` | All packages passed, including TCP/UDP loopback integration for none/AES-128/AES-256/ChaCha20 |
+| `go vet ./...`, `go mod verify` | Passed; all modules verified |
+| Encryption-only wire regression | All three ciphers accept independently assembled encrypted zero-key envelopes, route mixed users sharing a peer, emit zero-key responses, and reject combined numeric/encrypted credentials and plaintext downgrade |
+| API regression | Create/update/list omit numeric keys for encrypted users; switching to numeric mode removes encryption credentials; integer counters retain exact JSON precision |
+| DOM smoke against the real API | Login, numeric profile URI/clipboard, encrypted URI/clipboard without numeric key, CLI credential exclusivity, users/outbounds, Persian/English, themes, navigation and logout passed |
+| Installer mocks | Default repo, local-source detection, port validation, valid archive, corrupt/missing checksum, wrong executable version, binary-only failure, dependency reuse, source version discovery and automatic fallback policy passed |
+| Update mocks | State/config preservation, stopped-service behavior, unique backups and rollback after failed diagnostics passed |
+| Fuzz: encrypted decoder | 200,460 executions in a 5-second requested run (about 6 seconds elapsed), no failure |
+| Fuzz: protobuf/frame decoder | 113,145 executions in a 5-second requested run (about 6 seconds elapsed), no failure |
+| JavaScript syntax, shell syntax, workflow YAML and patch whitespace | Passed |
+| Release build | Static Linux amd64 and arm64 archives built; checksums generated |
+| Actual candidate preparation | Source-build path and binary path using the built amd64 archive both produced version 0.2.2-alpha; no system installation performed |
+
+The installer fixtures never install a system service or change this host's
+network settings. Windows/Wintun, Certbot, clean-VPS systemd installation and
+real WAN/mobile interoperability have not been exercised. No VPS installation
+speed measurement is claimed. See `WINDOWS.md` for the confirmed encryption
+incompatibility and Windows-specific hypotheses.
+
+---
+
 # Verification report — 0.2.1-alpha interface update
 
 Prepared 2026-10-13 (Asia/Tehran). This update changes the panel presentation,

@@ -139,9 +139,11 @@ func (p *packetCipher) open(b []byte) (Message, error) {
 		return Message{}, ErrMalformed
 	}
 	m, err := DecodeMessage(plain)
-	if err != nil || m.Key != p.Key {
+	if err != nil || m.Key != 0 {
 		return Message{}, ErrMalformed
 	}
+	// AEAD authenticates the user; the positive key is internal routing only.
+	m.Key = p.Key
 	return m, nil
 }
 func (s *Security) Decode(source string, id uint16, b []byte) (Message, string, error) {
@@ -232,10 +234,12 @@ func (s *Security) Encode(m Message) ([]byte, error) {
 	if p == nil {
 		return nil, errors.New("credential removed")
 	}
-	data := EncodeMessage(m)
 	if p.aead == nil {
-		return data, nil
+		return EncodeMessage(m), nil
 	}
+	// Encryption-only clients omit -key (the protocol default is zero).
+	m.Key = 0
+	data := EncodeMessage(m)
 	nonce := make([]byte, p.aead.NonceSize(), p.aead.NonceSize()+len(data)+p.aead.Overhead())
 	if _, err := rand.Read(nonce); err != nil {
 		return nil, fmt.Errorf("nonce generation: %w", err)

@@ -1,15 +1,15 @@
 # Architecture and wire contract
 
-Release: 0.2.1-alpha. This is an independently authored implementation, not a wrapper around a PingTunnel executable. No upstream PingTunnel/gohome/3x-ui sources or binaries are distributed.
+Release: 0.2.2-alpha. This is an independently authored implementation, not a wrapper around a PingTunnel executable. No upstream PingTunnel/gohome/3x-ui sources or binaries are distributed.
 
 ## Data flow
 
 1. A Linux raw IPv4 ICMP socket reads echo messages. Checksums, optional AEAD authentication, protobuf lengths, magic and reply type are checked before dispatch.
-2. The positive numeric key resolves to one user. The incoming encryption mode must match the user setting. Disabled, expired, exhausted or storage-faulted users are rejected. PING probes have a per-user token bucket.
+2. Plaintext uses a positive numeric credential to resolve one user. Encrypted envelopes use numeric zero and are resolved by AEAD authentication, then mapped to a private positive routing ID. The incoming encryption mode must match the user setting. Disabled, expired, exhausted or storage-faulted users are rejected. PING probes have a per-user token bucket.
 3. A bounded session is selected by user ID, source IP, connection ID and TCP/UDP. UDP additionally includes target host:port. This separates both protocols and multiple UDP destinations even when a client reuses an ID. The ICMP echo identifier can change through NAT without changing ownership.
 4. A per-session goroutine dials the chosen outbound. TCP selective repeat orders and deduplicates frames; UDP forwards a bounded datagram.
 5. Unique application bytes acquire durable per-user credit and update directional counters before forwarding. Protocol controls and TCP retransmissions do not charge again.
-6. Responses use the user's key and encryption, the latest echo ID/sequence and requested reply type, and the correct TCP bit. The response envelope's reverse protocol is -1, so the server does not process its own replies.
+6. Responses use the user's numeric credential (plaintext) or zero (encrypted) and selected encryption, the latest echo ID/sequence and requested reply type, and the correct TCP bit. The response envelope's reverse protocol is -1, so the server does not process its own replies.
 
 The panel runs in the same Go binary with separate HTTP goroutines. It does not call service restarts for CRUD. ICMP and HTTP share the state mutex briefly; durable grant acquisition and periodic flush can block on disk. This is not complete process isolation, and storage performance must be included in throughput benchmarks.
 
@@ -25,7 +25,7 @@ The independently written codec uses protobuf wire types directly; it does not d
 | 4 | Datagram or serialized TCP frame | bytes |
 | 5 | ICMP reply type | sint32 / zigzag |
 | 6 | Magic 0xdead | sint32 / zigzag |
-| 7 | Numeric per-user key | sint32 / zigzag |
+| 7 | Numeric credential (plaintext); zero (encrypted) | sint32 / zigzag |
 | 8 | Idle timeout seconds | int32 |
 | 9 | TCP mode | int32 |
 | 10 | Peer buffer size (observed, local allocation remains bounded) | int32 |
@@ -44,7 +44,7 @@ The complete protobuf envelope is encrypted as a random 12-byte nonce followed b
 
 Because encrypted legacy envelopes do not expose the access key, cold discovery tries configured encrypted credentials. Discovery is rate-limited globally to 32 attempts/second with a burst of 64; these are envelope lookups, each potentially testing multiple keys. Successful source IP/echo ID pairs cache up to four candidates in a bounded 4096-entry map. Ordinary packets reuse cached AEAD objects. Changed or deleted credentials invalidate candidates through an atomic immutable registry. Installations with no encrypted users use a fast plaintext path without the peer-cache mutex. Very large encrypted installations, shared echo IDs and cold-connection storms need separate load testing.
 
-Plaintext packets for encrypted users and packets authenticated with the wrong key are rejected. AEAD provides packet integrity/confidentiality, not forward secrecy or a separate replay-defense protocol. The requested `pingtunnel://HOST?lport=1080&mode=vpn&key=KEY` does not encode encryption options; the panel shows a complete CLI command and separate mode/secret for clients that support them.
+Plaintext packets for encrypted users, encrypted packets with a positive numeric password, and packets authenticated with the wrong key are rejected. The stored positive ID for encrypted users remains private to server routing/accounting. AEAD provides packet integrity/confidentiality, not forward secrecy or a separate replay-defense protocol. Numeric profiles export `pingtunnel://HOST?lport=1080&mode=vpn&key=KEY`. Encrypted profiles instead export `encrypt=MODE&encrypt_key=BASE64` (URL-encoded), with no numeric `key`; CLI commands likewise use exactly one credential method. Existing combined numeric/encrypted profiles must be re-exported.
 
 ## Reliability and limits
 
@@ -81,7 +81,7 @@ A 0600 Unix socket accepts local administrative credential changes and aggregate
 
 TLS certificate objects are cached in an atomic pointer. SIGHUP validates and swaps a complete new certificate. The Certbot deploy hook copies files before signaling; invalid reloads keep the prior certificate. Enabling TLS for the first time and changing panel bind/port require a restart. Plain HTTP is supported explicitly, including a public bind when selected during installation. Panel TLS and optional ICMP encryption are independent.
 
-The manager has grouped setup/service/panel/maintenance actions and an explicit Update path. It builds/tests before stopping the old service, stages the candidate binary, backs up config/binary plus stopped-state data, and probes diagnostics after restart. Failed health validation restores the previous executable while keeping user state. An already stopped service remains stopped. Updating the binary reconnects tunnels once. Installer state transitions are tested with a mock service; actual VPS deployment remains an acceptance step.
+The manager has grouped setup/service/panel/maintenance actions and an explicit Update path. It verifies a prebuilt release or builds source before stopping the old service (tests are opt-in for source installs and required in CI), stages the candidate binary, backs up config/binary plus stopped-state data, and probes diagnostics after restart. Failed health validation restores the previous executable while keeping user state. An already stopped service remains stopped. Updating the binary reconnects tunnels once. Installer state transitions are tested with a mock service; actual VPS deployment remains an acceptance step.
 
 ## Reference boundary
 

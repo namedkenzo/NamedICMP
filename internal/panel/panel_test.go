@@ -80,6 +80,9 @@ func TestAuthCSRFAndUserLifecycle(t *testing.T) {
 	if code != 200 {
 		t.Fatalf("encryption update: %s", b)
 	}
+	if bytes.Contains(b, []byte(`"key":`)) {
+		t.Fatal("encrypted create/update response exposes numeric key")
+	}
 	json.Unmarshal(b, &u)
 	secret := u.EncryptionKey
 	if u.Encryption != "aes128" || secret == "" {
@@ -97,6 +100,18 @@ func TestAuthCSRFAndUserLifecycle(t *testing.T) {
 	code, b = request("/api/users", "GET", "", "", "")
 	if code != 200 || !bytes.Contains(b, []byte(`\u003cscript\u003e`)) {
 		t.Fatal("user JSON not escaped")
+	}
+	if bytes.Contains(b, []byte(`"key":`)) {
+		t.Fatal("encrypted list exposes numeric key")
+	}
+	// Switching to numeric mode removes the encryption credential.
+	edit["encryption"] = "none"
+	encoded, _ = json.Marshal(edit)
+	code, b = request("/api/users", "PUT", string(encoded), token, srv.URL)
+	u = store.User{}
+	json.Unmarshal(b, &u)
+	if code != 200 || u.Key <= 0 || u.EncryptionKey != "" {
+		t.Fatal("numeric mode retained encryption")
 	}
 	code, _ = request("/api/users", "DELETE", `{"id":"`+u.ID+`"}`, token, srv.URL)
 	if code != 200 || len(s.Users()) != 0 {
@@ -134,5 +149,24 @@ func TestLoginRateLimitAndStaticHeaders(t *testing.T) {
 	h.ServeHTTP(w, httptest.NewRequest("GET", "http://panel/", nil))
 	if w.Code != 200 || w.Header().Get("Content-Security-Policy") == "" {
 		t.Fatal("static assets/security headers")
+	}
+}
+
+func TestPublicProfilePreservesCountersAndExclusiveCredentials(t *testing.T) {
+	u := store.User{Key: 123, Encryption: "none", Quota: 1 << 60, Upload: 1<<54 + 1}
+	encoded, err := json.Marshal(userProfile(u))
+	if err != nil || !bytes.Contains(encoded, []byte(`"upload":18014398509481985`)) {
+		t.Fatal("profile rounded integer counters")
+	}
+	if _, ok := userProfile(u)["encryption_key"]; ok {
+		t.Fatal("numeric profile has an encryption credential")
+	}
+	u.Encryption, u.EncryptionKey = "aes256", "secret"
+	profile := userProfile(u)
+	if _, ok := profile["key"]; ok {
+		t.Fatal("encrypted profile has a numeric credential")
+	}
+	if profile["encryption_key"] != "secret" {
+		t.Fatal("missing encryption credential")
 	}
 }

@@ -226,7 +226,7 @@ func (p *Panel) api(w http.ResponseWriter, r *http.Request) {
 			fail(w, 405, "method not allowed")
 			return
 		}
-		jsonReply(w, 200, map[string]any{"csrf": s.CSRF, "public_host": p.Config.PublicHost, "tls": r.TLS != nil, "version": "0.2.1-alpha", "protocol": "PingTunnel IPv4 TCP + UDP"})
+		jsonReply(w, 200, map[string]any{"csrf": s.CSRF, "public_host": p.Config.PublicHost, "tls": r.TLS != nil, "version": "0.2.2-alpha", "protocol": "PingTunnel IPv4 TCP + UDP"})
 	case "/api/logout":
 		if r.Method != "POST" {
 			fail(w, 405, "method not allowed")
@@ -267,6 +267,22 @@ type userInput struct {
 	Encryption *string `json:"encryption"`
 }
 
+// Keep the private routing ID out of encryption-only client profiles.
+func userProfile(u store.User) map[string]any {
+	profile := map[string]any{
+		"id": u.ID, "name": u.Name, "enabled": u.Enabled,
+		"expires": u.Expires, "quota": u.Quota, "upload": u.Upload,
+		"download": u.Download, "recovery": u.Recovery, "outbound": u.Outbound,
+		"created": u.Created, "encryption": u.Encryption,
+	}
+	if u.Encryption == "none" || u.Encryption == "" {
+		profile["key"] = u.Key
+	} else {
+		profile["encryption_key"] = u.EncryptionKey
+	}
+	return profile
+}
+
 func (p *Panel) users(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
@@ -278,7 +294,11 @@ func (p *Panel) users(w http.ResponseWriter, r *http.Request) {
 		}
 		out := make([]map[string]any, 0, len(users))
 		for _, u := range users {
-			out = append(out, map[string]any{"id": u.ID, "name": u.Name, "key": u.Key, "enabled": u.Enabled, "expires": u.Expires, "quota": u.Quota, "upload": u.Upload, "download": u.Download, "recovery": u.Recovery, "used": u.Used(), "outbound": u.Outbound, "created": u.Created, "encryption": u.Encryption, "encryption_key": u.EncryptionKey, "online": counts[u.ID], "active": u.Allowed(time.Now())})
+			profile := userProfile(u)
+			profile["used"] = u.Used()
+			profile["online"] = counts[u.ID]
+			profile["active"] = u.Allowed(time.Now())
+			out = append(out, profile)
 		}
 		jsonReply(w, 200, out)
 	case "POST", "PUT":
@@ -312,7 +332,7 @@ func (p *Panel) users(w http.ResponseWriter, r *http.Request) {
 				p.Core.Revoke(u.ID)
 			}
 		}
-		jsonReply(w, 200, u)
+		jsonReply(w, 200, userProfile(u))
 	case "DELETE":
 		var v struct {
 			ID string `json:"id"`

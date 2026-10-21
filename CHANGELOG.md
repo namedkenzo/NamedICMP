@@ -1,3 +1,11 @@
+# 0.2.2-alpha
+
+- Prefer verified Linux release binaries for remote install/update; reuse installed dependencies and remove mandatory install-time tests/compilation.
+- Default to namedkenzo/NamedICMP without a repository prompt; add bounded/retried downloads, occupied-port detection, username validation and startup health checks.
+- Fix encryption-only GUI authentication, hide private routing IDs from encrypted profiles, and export mutually exclusive numeric/encrypted URIs and commands.
+- Add English default and Persian READMEs, Windows diagnosis and upgrade instructions.
+- Create draft prereleases with both Linux archives and SHA256SUMS on version tags.
+
 # Changelog
 
 ## 0.2.1-alpha

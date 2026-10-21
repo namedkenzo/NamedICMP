@@ -25,8 +25,10 @@ const LeaseBytes int64 = 256 * 1024
 const iterations = 210000
 
 type User struct {
-	ID            string `json:"id"`
-	Name          string `json:"name"`
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	// Key is the numeric credential in plaintext mode and a private routing ID
+	// in encrypted mode. Encrypted wire packets use zero and authenticate by AEAD.
 	Key           int32  `json:"key"`
 	Enabled       bool   `json:"enabled"`
 	Expires       int64  `json:"expires"`

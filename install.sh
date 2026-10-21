@@ -2,13 +2,14 @@
 # namedICMP installer/manager. Original implementation; Debian/Ubuntu + systemd.
 set -Eeuo pipefail
 umask 077
-REPOSITORY="${NAMEDICMP_REPO:-YOUR_USERNAME/namedICMP}"
+REPOSITORY="${NAMEDICMP_REPO:-namedkenzo/NamedICMP}"
 REFERENCE="${NAMEDICMP_REF:-main}"
 PREFIX=/opt/namedicmp
 CONFIG=/etc/namedicmp/config.json
 STATE=/var/lib/namedicmp
-GO_VERSION=1.27.2
-MANAGER_VERSION=0.2.1-alpha
+GO_VERSION=1.27.3
+MANAGER_VERSION=0.2.2-alpha
+INSTALL_MODE="${NAMEDICMP_INSTALL_MODE:-auto}"
 workdir=""
 trap '[[ -z "$workdir" ]] || rm -rf -- "$workdir"' EXIT
 
@@ -19,16 +20,26 @@ require_root(){ [[ $EUID -eq 0 ]] || { say 'Run as root: sudo bash install.sh'; 
 require_installed(){ [[ -x $PREFIX/namedicmp && -f $CONFIG ]] || { say 'Install namedICMP first.'; return 1; }; }
 valid_port(){ [[ "$1" =~ ^[0-9]{1,5}$ ]] && ((10#$1>=1 && 10#$1<=65535)); }
 get_port(){ local answer; while :;do ask answer 'Web panel port:' '8443';if valid_port "$answer";then printf -v "$1" '%s' "$((10#$answer))";return;fi;say 'Enter a port from 1 to 65535.';done; }
-packages(){ command -v apt-get >/dev/null || { say 'This installer supports Debian/Ubuntu. See README for manual Linux installation.'; return 1; };apt-get update;apt-get install -y --no-install-recommends ca-certificates curl tar python3 openssl iproute2; }
+packages(){
+ command -v apt-get >/dev/null || { say 'This installer supports Debian/Ubuntu. See README for manual Linux installation.'; return 1; }
+ local missing=() package
+ for package in ca-certificates curl tar python3 openssl iproute2;do
+  if ! dpkg-query -W -f='${Status}' "$package" 2>/dev/null | grep -qx 'install ok installed';then missing+=("$package");fi
+ done
+ if (( ${#missing[@]} ));then apt-get update;apt-get install -y --no-install-recommends "${missing[@]}";fi
+}
+download(){ curl --fail --location --show-error --connect-timeout 15 --max-time 180 --retry 2 --proto '=https' --tlsv1.2 "$1" -o "$2"; }
+validate_source(){
+ [[ $REPOSITORY =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || { say 'Invalid GitHub repository.';return 1; }
+ [[ $REFERENCE =~ ^[A-Za-z0-9_.-]+$ ]] || { say 'Invalid source ref.';return 1; }
+}
+
 temporary(){ [[ -n $workdir ]] || workdir=$(mktemp -d /tmp/namedicmp-install.XXXXXXXX); }
 source_tree(){
  local local_dir="";if [[ -f ${BASH_SOURCE[0]} ]];then local_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd);fi
  if [[ -n $local_dir && -f $local_dir/go.mod && -d $local_dir/cmd/namedicmp ]];then printf -v "$1" '%s' "$local_dir";return;fi
- if [[ $REPOSITORY == YOUR_USERNAME/namedICMP && -f /etc/namedicmp/source.json ]];then REPOSITORY=$(python3 -c 'import json;print(json.load(open("/etc/namedicmp/source.json"))["repository"])');fi
- if [[ $REPOSITORY == YOUR_USERNAME/namedICMP ]];then ask REPOSITORY 'GitHub repository (owner/namedICMP):';fi
- [[ $REPOSITORY =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || { say 'Invalid GitHub repository.';return 1; }
- [[ $REFERENCE =~ ^[A-Za-z0-9_.-]+$ ]] || { say 'Invalid source ref.';return 1; }
- temporary;curl --fail --location --show-error --proto '=https' --tlsv1.2 "https://codeload.github.com/$REPOSITORY/tar.gz/$REFERENCE" -o "$workdir/source.tar.gz"
+ validate_source || return
+ temporary;download "https://codeload.github.com/$REPOSITORY/tar.gz/$REFERENCE" "$workdir/source.tar.gz"
  local source_path;source_path=$(mktemp -d "$workdir/source.XXXXXXXX");tar -xzf "$workdir/source.tar.gz" -C "$source_path" --strip-components=1
  [[ -f $source_path/go.mod && -f $source_path/install.sh ]] || { say 'Source archive is not namedICMP.';return 1; };printf -v "$1" '%s' "$source_path"
 }
@@ -37,15 +48,15 @@ go_binary(){
  if [[ $current =~ ^go1\.([0-9]+) ]] && (( ${BASH_REMATCH[1]} >= 26 ));then printf -v "$1" '%s' "$(command -v go)";return;fi
  if [[ -x $workdir/go/bin/go ]];then printf -v "$1" '%s' "$workdir/go/bin/go";return;fi
  local arch checksum;case $(uname -m) in
- x86_64)arch=amd64;checksum=ecbadb99091a3f46e31f5f934b068b1864eafa7995211b39eaddf76996045fe5;;
- aarch64|arm64)arch=arm64;checksum=94f3e30b8e374bc285e7dadc11e0865726b9bc6e85b841ccceaabc0214c6b7c8;;
+ x86_64)arch=amd64;checksum=65efbc80fdc1fa2cd2631cad5b481777a68e8725f34e89f50fc6ac714e379b40;;
+ aarch64|arm64)arch=arm64;checksum=a06e99309dbcbdca1a8ccd2282c3ee146e55930886e26b4f1193269587165f49;;
  *)say 'Unsupported architecture. Linux amd64 and arm64 are supported.';return 1;;esac
- temporary;curl --fail --location --show-error --proto '=https' --tlsv1.2 "https://go.dev/dl/go${GO_VERSION}.linux-${arch}.tar.gz" -o "$workdir/go.tar.gz"
- printf '%s  %s\n' "$checksum" "$workdir/go.tar.gz" | sha256sum -c -
- tar -xzf "$workdir/go.tar.gz" -C "$workdir";printf -v "$1" '%s' "$workdir/go/bin/go"
+ temporary;download "https://go.dev/dl/go${GO_VERSION}.linux-${arch}.tar.gz" "$workdir/go.tar.gz" || return
+ printf '%s  %s\n' "$checksum" "$workdir/go.tar.gz" | sha256sum -c - || return
+ tar -xzf "$workdir/go.tar.gz" -C "$workdir" || return;printf -v "$1" '%s' "$workdir/go/bin/go"
 }
 credentials(){
- ask admin_username 'Panel username:' 'admin'
+ while :;do ask admin_username 'Panel username:' 'admin';if (( ${#admin_username} >= 1 && ${#admin_username} <= 64 ));then break;fi;say 'Use 1–64 characters for the username.';done
  while :;do read -r -s -p 'Panel password (12+ characters; blank generates one): ' admin_password </dev/tty;printf '\n';if [[ -z $admin_password ]];then admin_password=$(openssl rand -base64 24);say "Generated password: $admin_password";break;fi;if (( ${#admin_password} >= 12 && ${#admin_password} <= 256 ));then break;fi;say 'Use 12–256 characters.';done
 }
 credentials_json(){ printf '%s\0%s' "$admin_username" "$admin_password" | python3 -c 'import sys,json;u,p=sys.stdin.buffer.read().decode().split("\0",1);print(json.dumps({"username":u,"password":p}))'; }
@@ -110,8 +121,11 @@ certificate(){
  [[ $domain =~ ^([A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?\.)+[A-Za-z]{2,63}$ ]] || { say 'Enter a domain, not an IP or URL.';return 1; }
  ask email 'Email for certificate expiry notices:'
  [[ $email == *@*.* && $email != -* ]] || { say 'Invalid email.';return 1; }
- if ss -H -ltn 'sport = :80' | read -r _;then say 'Port 80 is already occupied. Free it before requesting a certificate.';return 1;fi
- apt-get install -y --no-install-recommends certbot || return 1
+ if [[ -n $(ss -H -ltn 'sport = :80') ]];then say 'Port 80 is already occupied. Free it before requesting a certificate.';return 1;fi
+ if ! command -v certbot >/dev/null;then
+  apt-get update || return 1
+  apt-get install -y --no-install-recommends certbot || return 1
+ fi
  say 'The domain must resolve to this server, with incoming TCP port 80 reachable.'
  certbot certonly --standalone --non-interactive --agree-tos --email "$email" --cert-name namedicmp -d "$domain" || return 1
  install -d -m 0750 -o root -g namedicmp /etc/namedicmp/tls
@@ -148,6 +162,7 @@ UNIT
  systemctl daemon-reload || return 1
  systemctl enable --now namedicmp-renew.timer || return 1
  systemctl restart namedicmp.service || return 1
+ wait_healthy || { say 'Service failed its health check; inspect Recent logs.';return 1; }
  say "HTTPS enabled: https://$domain:$panel_port . Renewals reload TLS without restarting the ICMP core."
 }
 install_namedicmp(){
@@ -157,9 +172,11 @@ install_namedicmp(){
   restoring=y;say 'Reinstalling with retained configuration and users.'
  fi
  packages
- local source_dir go_cmd panel_port public_host bind_address use_ssl=n
+ local source_dir panel_port public_host bind_address use_ssl=n
  if [[ $restoring == n ]];then
- get_port panel_port;ask public_host 'Public server IPv4 or domain for client configs:'
+ get_port panel_port
+ if [[ -n $(ss -H -ltn "sport = :$panel_port") ]];then say "TCP port $panel_port is already occupied. Choose a free panel port.";return 1;fi
+ ask public_host 'Public server IPv4 or domain for client configs:'
  [[ -n $public_host && $public_host != *[[:space:]]* && $public_host != */* ]] || { say 'A public IP or domain is required.';return 1; }
  if yesno 'Obtain SSL for the web panel with Certbot?';then use_ssl=y;[[ $panel_port != 80 ]] || { say 'Choose a panel port other than 80 for SSL.';return 1; };fi
  bind_address=0.0.0.0
@@ -170,9 +187,7 @@ install_namedicmp(){
   bind_address=$(python3 -c 'import json;print(json.load(open("/etc/namedicmp/config.json"))["panel_listen"].rsplit(":",1)[0])')
   public_host=$(python3 -c 'import json;print(json.load(open("/etc/namedicmp/config.json"))["public_host"])')
  fi
- source_tree source_dir;go_binary go_cmd
- temporary;say 'Building and testing the independent core…'
- (cd "$source_dir";GOTOOLCHAIN=local "$go_cmd" test ./...;CGO_ENABLED=0 GOTOOLCHAIN=local "$go_cmd" build -buildvcs=false -trimpath -ldflags='-s -w' -o "$workdir/namedicmp" ./cmd/namedicmp)
+ source_tree source_dir;build_candidate "$source_dir"
  getent group namedicmp >/dev/null || groupadd --system namedicmp
  id -u namedicmp >/dev/null 2>&1 || useradd --system --gid namedicmp --home-dir "$STATE" --shell /usr/sbin/nologin namedicmp
  install -d -m 0755 "$PREFIX";install -m 0755 "$workdir/namedicmp" "$PREFIX/namedicmp"
@@ -189,9 +204,10 @@ WRAPPER
  remember_source
  install_service;echo_suppression
  systemctl enable namedicmp.service
- if [[ $use_ssl == y ]];then if ! certificate;then systemctl stop namedicmp.service || true;say 'SSL setup failed; the panel stays stopped. Correct DNS/port 80 and retry menu option 8.';fi
+ if [[ $use_ssl == y ]];then if ! certificate;then systemctl stop namedicmp.service || true;say 'SSL setup failed; the panel stays stopped. Correct DNS/port 80 and retry menu option 8.';return 1;fi
  else
   systemctl start namedicmp.service
+  wait_healthy || { say 'Service failed its health check; inspect Recent logs.';return 1; }
   if [[ $restoring == y ]];then say 'Retained configuration restored; check Status for the configured HTTP/HTTPS address.'
   elif [[ $bind_address == 127.0.0.1 ]];then say "SSH tunnel: ssh -N -L $panel_port:127.0.0.1:$panel_port root@$public_host";say "Open http://127.0.0.1:$panel_port"
   else say "Panel: http://$public_host:$panel_port";fi
@@ -199,19 +215,58 @@ WRAPPER
  say 'Allow the selected TCP panel port and IPv4 ICMP in your server/cloud firewall. Run namedicmp to reopen this menu.'
 }
 remember_source(){
- if [[ $REPOSITORY != YOUR_USERNAME/namedICMP ]];then
   python3 - "$REPOSITORY" "$REFERENCE" <<'PY'
 import json,sys,os
 with open('/etc/namedicmp/source.json','w') as f: json.dump({'repository':sys.argv[1],'reference':sys.argv[2]},f)
 os.chmod('/etc/namedicmp/source.json',0o600)
 PY
- fi
+}
+release_candidate(){
+ local arch asset base checksum
+ case $(uname -m) in x86_64)arch=amd64;;aarch64|arm64)arch=arm64;;*)say 'Unsupported architecture.';return 1;;esac
+ asset="namedicmp-linux-$arch.tar.gz"
+ base="https://github.com/$REPOSITORY/releases/download/v$MANAGER_VERSION"
+ temporary
+ # Return 2 only for unavailable downloads; integrity failures must never fall back.
+ download "$base/SHA256SUMS" "$workdir/SHA256SUMS" || return 2
+ download "$base/$asset" "$workdir/$asset" || return 2
+ checksum=$(awk -v file="$asset" '$2==file {print $1}' "$workdir/SHA256SUMS")
+ [[ $checksum =~ ^[a-f0-9]{64}$ ]] || { say 'Missing or invalid release checksum.';return 1; }
+ printf '%s  %s\n' "$checksum" "$workdir/$asset" | sha256sum -c - || return 1
+ # Extract only the executable, never archive paths or arbitrary release files.
+ tar -xzf "$workdir/$asset" -C "$workdir" --no-same-owner namedicmp || return 1
+ chmod 0755 "$workdir/namedicmp" || return 1
+ [[ $("$workdir/namedicmp" version) == "$MANAGER_VERSION" ]] || { say 'Release version mismatch.';return 1; }
+ say "Verified prebuilt release $MANAGER_VERSION ($arch). No Go installation needed."
 }
 build_candidate(){
- local source_dir=$1 go_cmd
- go_binary go_cmd;temporary
- say "Testing and building namedICMP $MANAGER_VERSION. Existing tunnels keep running during this step."
- (cd "$source_dir";GOTOOLCHAIN=local "$go_cmd" test ./...;CGO_ENABLED=0 GOTOOLCHAIN=local "$go_cmd" build -buildvcs=false -trimpath -ldflags='-s -w' -o "$workdir/namedicmp" ./cmd/namedicmp)
+ local source_dir=$1 go_cmd result=0 local_dir="" source_version
+ validate_source || return
+ # Resolve the release from the selected source, so an installed old manager
+ # can update to the current main version rather than reinstalling itself.
+ source_version=$(sed -n 's/^const version = "\(.*\)"$/\1/p' "$source_dir/cmd/namedicmp/main.go")
+ [[ $source_version =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.-]+)?$ ]] || { say 'Invalid source version.';return 1; }
+ MANAGER_VERSION=$source_version
+ case $INSTALL_MODE in auto|binary|source);;*)say 'NAMEDICMP_INSTALL_MODE must be auto, binary or source.';return 1;;esac
+ if [[ -f ${BASH_SOURCE[0]} ]];then local_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd);fi
+ # Local checkouts and custom refs build their own code. Never silently replace it with a release.
+ if [[ $INSTALL_MODE == binary || $INSTALL_MODE == auto && $REFERENCE == main && ! -f $local_dir/go.mod ]];then
+  if release_candidate;then return;else result=$?;fi
+  if [[ $INSTALL_MODE == binary || $result != 2 ]];then return "$result";fi
+  say 'Prebuilt release unavailable; falling back to a source build (slower).'
+ fi
+ temporary;go_binary go_cmd || return
+ say "Building namedICMP $MANAGER_VERSION from source. Existing tunnels keep running."
+ (cd "$source_dir" || exit; if [[ ${NAMEDICMP_RUN_TESTS:-0} == 1 ]];then GOTOOLCHAIN=local "$go_cmd" test ./... || exit;fi;CGO_ENABLED=0 GOTOOLCHAIN=local "$go_cmd" build -buildvcs=false -trimpath -ldflags='-s -w' -o "$workdir/namedicmp" ./cmd/namedicmp)
+}
+
+wait_healthy(){
+ local attempt
+ for attempt in {1..30};do
+  if "$PREFIX/namedicmp" diagnostics >/dev/null 2>&1;then return;fi
+  sleep 0.2
+ done
+ return 1
 }
 update_namedicmp(){
  require_installed
@@ -241,12 +296,9 @@ PY
   say 'Unable to replace executable; previous version retained.';return 1
  fi
  if [[ $was_running == y ]];then
-  local healthy=n attempt
+  local healthy=n
   if systemctl start namedicmp.service;then
-   for attempt in {1..30};do
-    if "$PREFIX/namedicmp" diagnostics >/dev/null 2>&1;then healthy=y;break;fi
-    sleep 0.2
-   done
+   if wait_healthy;then healthy=y;fi
   fi
   if [[ $healthy != y ]];then
    systemctl stop namedicmp.service || true

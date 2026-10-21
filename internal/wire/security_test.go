@@ -80,7 +80,11 @@ func FuzzEncryptedDecoder(f *testing.F) {
 	s.SetCredentials(credentials)
 	f.Add([]byte("bad packet"))
 	for _, c := range credentials {
-		data := EncodeMessage(Message{Key: c.Key, Connection: "seed", Target: "8.8.8.8:53", Payload: []byte("seed")})
+		wireKey := c.Key
+		if c.Mode != "none" {
+			wireKey = 0
+		}
+		data := EncodeMessage(Message{Key: wireKey, Connection: "seed", Target: "8.8.8.8:53", Payload: []byte("seed")})
 		if c.Mode != "none" {
 			p, _ := buildCipher(c)
 			nonce := make([]byte, 12)
@@ -89,4 +93,50 @@ func FuzzEncryptedDecoder(f *testing.F) {
 		f.Add(data)
 	}
 	f.Fuzz(func(t *testing.T, b []byte) { _, _, _ = s.Decode("192.0.2.1", 4, b) })
+}
+
+// Build client packets directly: these must work with no numeric password and
+// responses must also carry the protocol default zero, even for multiple users.
+func TestEncryptionOnlyCredentials(t *testing.T) {
+	for _, mode := range []string{"aes128", "aes256", "chacha20"} {
+		t.Run(mode, func(t *testing.T) {
+			server := NewSecurity()
+			a, b := credential(123, mode), credential(456, mode)
+			if err := server.SetCredentials([]Credential{a, b, credential(789, "none")}); err != nil {
+				t.Fatal(err)
+			}
+			for _, user := range []Credential{a, b} {
+				cipher, _ := buildCipher(user)
+				packet := func(key int32) []byte {
+					nonce := make([]byte, cipher.aead.NonceSize())
+					return cipher.aead.Seal(nonce, nonce, EncodeMessage(Message{Key: key, Kind: 1, Payload: []byte("probe")}), nil)
+				}
+				for _, source := range []string{"cold-peer", "cold-peer"} {
+					m, gotMode, err := server.Decode(source, 7, packet(0))
+					if err != nil || m.Key != user.Key || gotMode != mode {
+						t.Fatalf("encryption-only routing: %+v %s %v", m, gotMode, err)
+					}
+					reply, err := server.Encode(m)
+					if err != nil {
+						t.Fatal(err)
+					}
+					n := cipher.aead.NonceSize()
+					plain, err := cipher.aead.Open(nil, reply[:n], reply[n:], nil)
+					if err != nil {
+						t.Fatal(err)
+					}
+					response, err := DecodeMessage(plain)
+					if err != nil || response.Key != 0 || !bytes.Equal(response.Payload, m.Payload) {
+						t.Fatal("numeric routing key leaked onto encrypted wire")
+					}
+				}
+				if _, _, err := server.Decode("cold-peer", 7, packet(user.Key)); err == nil {
+					t.Fatal("combined encryption and numeric password accepted")
+				}
+				if _, _, err := server.Decode("cold-peer", 7, EncodeMessage(Message{Key: user.Key})); err == nil {
+					t.Fatal("encrypted user accepted numeric-only authentication")
+				}
+			}
+		})
+	}
 }
