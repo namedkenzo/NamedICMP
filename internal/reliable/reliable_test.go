@@ -1,4 +1,4 @@
-package core
+package reliable
 
 import (
 	"namedicmp/internal/wire"
@@ -145,3 +145,4 @@ func TestUnsentFrameCannotBeAcknowledged(t *testing.T) {
 		t.Fatal("early ACK discarded queued data")
 	}
 }
+

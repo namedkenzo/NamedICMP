@@ -1,4 +1,7 @@
 /bin/
+clients/**/bin/
+clients/**/obj/
+clients/namedP.Smoke/preview-*.png
 /dist/
 *.db
 *.db.lock
@@ -9,3 +12,4 @@ state.json
 *.key
 coverage.out
 /node_modules/
+

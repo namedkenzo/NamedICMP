@@ -8,7 +8,9 @@ Object.assign(dictionary.fa,{encryption:'رمزنگاری',noneEncryption:'رم�
 Object.assign(dictionary.en,{brandLine:'A network. With your name on it.',homeTitle:'Control, at a glance.',navigation:'Main navigation',openNavigation:'Open navigation',closeDialog:'Close dialog'});
 Object.assign(dictionary.fa,{brandLine:'شبکه‌ای با امضای شما.',homeTitle:'کنترل، در یک نگاه.',navigation:'منوی اصلی',openNavigation:'باز کردن منو',closeDialog:'بستن پنجره'});
 let lang=localStorage.getItem('namedicmp-language')||'fa';if(!dictionary[lang])lang='fa';
-let theme=localStorage.getItem('namedicmp-theme')||'dark';
+const systemTheme=matchMedia('(prefers-color-scheme: dark)');
+let theme=localStorage.getItem('namedicmp-theme')||(systemTheme.matches?'dark':'light');
+systemTheme.addEventListener('change',event=>{if(!localStorage.getItem('namedicmp-theme')){theme=event.matches?'dark':'light';preferences();}});
 if(!['dark','light'].includes(theme))theme='dark';
 let csrf='',page='home',users=[],outbounds=[],home=null,session=null,editorAction=null,pollTimer=null,busy=false;
 const history=[];
@@ -137,3 +139,4 @@ function profile(u){
  }
 }
 preferences();api('session').then(answer=>{session=answer;csrf=answer.csrf;$('login').hidden=true;$('app').hidden=false;refresh().then(schedule);}).catch(()=>{});
+

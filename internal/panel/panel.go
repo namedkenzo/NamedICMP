@@ -226,7 +226,7 @@ func (p *Panel) api(w http.ResponseWriter, r *http.Request) {
 			fail(w, 405, "method not allowed")
 			return
 		}
-		jsonReply(w, 200, map[string]any{"csrf": s.CSRF, "public_host": p.Config.PublicHost, "tls": r.TLS != nil, "version": "0.2.2-alpha", "protocol": "PingTunnel IPv4 TCP + UDP"})
+		jsonReply(w, 200, map[string]any{"csrf": s.CSRF, "public_host": p.Config.PublicHost, "tls": r.TLS != nil, "version": "0.3.0-alpha", "protocol": "PingTunnel IPv4 TCP + UDP"})
 	case "/api/logout":
 		if r.Method != "POST" {
 			fail(w, 405, "method not allowed")
@@ -246,7 +246,7 @@ func (p *Panel) api(w http.ResponseWriter, r *http.Request) {
 		if p.Core != nil {
 			m["core"] = p.Core.Metrics()
 		}
-		m["users"] = len(p.Store.Users())
+		m["users"] = p.Store.UserCount()
 		jsonReply(w, 200, m)
 	case "/api/users":
 		p.users(w, r)
@@ -272,7 +272,7 @@ func userProfile(u store.User) map[string]any {
 	profile := map[string]any{
 		"id": u.ID, "name": u.Name, "enabled": u.Enabled,
 		"expires": u.Expires, "quota": u.Quota, "upload": u.Upload,
-		"download": u.Download, "recovery": u.Recovery, "outbound": u.Outbound,
+		"download": u.Download, "recovery": u.Recovery, "used": u.Used(), "outbound": u.Outbound,
 		"created": u.Created, "encryption": u.Encryption,
 	}
 	if u.Encryption == "none" || u.Encryption == "" {
@@ -409,3 +409,4 @@ func (p *Panel) outbounds(w http.ResponseWriter, r *http.Request) {
 	}
 }
 func (p *Panel) RunStats(ctx context.Context) { p.Stats.Run(ctx) }
+

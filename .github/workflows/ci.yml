@@ -18,8 +18,10 @@ jobs:
       - run: bash scripts/test_installer.sh
       - run: bash scripts/test_update.sh
       - run: node --check internal/panel/web/app.js
+      - run: node scripts/test_versions.cjs
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npm run test:ui
       - run: go test ./internal/wire -fuzz=FuzzDecode -fuzztime=15s -parallel=2
       - run: go test ./internal/wire -fuzz=FuzzEncryptedDecoder -fuzztime=15s -parallel=2
       - run: CGO_ENABLED=0 go build -buildvcs=false -trimpath -o /tmp/namedicmp ./cmd/namedicmp
+

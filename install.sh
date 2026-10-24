@@ -8,7 +8,7 @@ PREFIX=/opt/namedicmp
 CONFIG=/etc/namedicmp/config.json
 STATE=/var/lib/namedicmp
 GO_VERSION=1.27.3
-MANAGER_VERSION=0.2.2-alpha
+MANAGER_VERSION=0.3.0-alpha
 INSTALL_MODE="${NAMEDICMP_INSTALL_MODE:-auto}"
 workdir=""
 trap '[[ -z "$workdir" ]] || rm -rf -- "$workdir"' EXIT
@@ -375,3 +375,4 @@ menu(){ require_root;while :;do
  1)run_menu_action install_namedicmp;;2)run_menu_action update_namedicmp;;3)run_menu_action start_namedicmp;;4)run_menu_action stop_namedicmp;;5)run_menu_action restart_namedicmp;;6)run_menu_action status_namedicmp;;7)run_menu_action logs_namedicmp;;8)run_menu_action certificate;;9)run_menu_action change_port;;10)run_menu_action change_credentials;;11)run_menu_action uninstall;;0)exit 0;;*)say 'Invalid option. Choose one of the listed numbers.';;esac
 done;}
 if [[ ${NAMEDICMP_INSTALLER_TEST:-0} != 1 ]];then menu;fi
+

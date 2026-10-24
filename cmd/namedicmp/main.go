@@ -24,7 +24,7 @@ import (
 	"namedicmp/internal/store"
 )
 
-const version = "0.2.2-alpha"
+const version = "0.3.0-alpha"
 
 type credentials struct {
 	Username string `json:"username"`
@@ -322,3 +322,4 @@ func serve(args []string) error {
 	<-maintenanceDone
 	return err
 }
+

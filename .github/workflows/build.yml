@@ -2,6 +2,7 @@ name: Build Linux archives
 on:
   workflow_dispatch:
   push:
+    branches: [main]
     tags: ['v*']
 permissions:
   contents: write
@@ -23,14 +24,18 @@ jobs:
           name: namedicmp-linux-builds
           path: dist/*
           retention-days: 30
-      - name: Create draft prerelease with installer assets
-        if: startsWith(github.ref, 'refs/tags/')
+      - name: Publish server prerelease with installer assets
+        if: startsWith(github.ref, 'refs/tags/v') || (github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[release-v0.3.0-alpha]'))
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
           version_dir=$(mktemp -d)
           tar -xzf dist/namedicmp-linux-amd64.tar.gz -C "$version_dir" namedicmp
-          test "$RELEASE_TAG" = "v$("$version_dir/namedicmp" version)"
+          server_tag="v$("$version_dir/namedicmp" version)"
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            test "$RELEASE_TAG" = "$server_tag"
+          fi
           rm -rf "$version_dir"
-          gh release create "$RELEASE_TAG" dist/* --verify-tag --draft --prerelease --title "namedICMP $RELEASE_TAG" --notes-file docs/RELEASE-v0.2.2-alpha.md
+          gh release create "$server_tag" dist/* --target "$GITHUB_SHA" --prerelease --title "namedICMP $server_tag · Server and panel" --notes-file "docs/RELEASE-${server_tag}.md"
+

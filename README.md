@@ -1,5 +1,12 @@
 # namedICMP
 
+New in 0.3.0 alpha: [namedP for Windows](docs/NAMEDP.md), a dedicated native client with full-device IPv4 VPN and local SOCKS5 modes. See [release notes](docs/RELEASE-v0.3.0-alpha.md) for validation status and limitations.
+
+The web panel/server and Windows client have independent versions and releases:
+**namedICMP 0.3.0-alpha** (`v0.3.0-alpha`) and **namedP 0.1.0-alpha**
+(`namedp-v0.1.0-alpha`). Download the Windows ZIP from the namedP release;
+the Linux installer only installs the server and web panel.
+
 **A self-hosted web panel and independent Go core for TCP/UDP tunneling over IPv4 ICMP.**
 
 [فارسی](README.fa.md) · [Releases](https://github.com/namedkenzo/NamedICMP/releases) · [Windows clients](docs/WINDOWS.md)
@@ -104,3 +111,4 @@ The tag workflow tests and builds both architectures, then creates a **draft pre
 - **TON:** `UQDPGgQWQb9j8pxC5_RIh2HbuTJjaIYSga7FXPLZWbyzTZJN`
 
 [MIT License](LICENSE) · [Third-party notices](THIRD_PARTY_NOTICES.md)
+

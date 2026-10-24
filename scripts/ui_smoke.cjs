@@ -23,7 +23,7 @@ async function availablePort() { const s=net.createServer(); await new Promise(r
   await wait(async()=>{if(server.exitCode!==null)throw new Error(stderr);try{return (await fetch(url)).ok;}catch{return false;}});
   const jar=new CookieJar(),errors=[],consoleEvents=new VirtualConsole();consoleEvents.on('jsdomError',e=>errors.push(e.message));
   dom=await JSDOM.fromURL(url,{resources:'usable',runScripts:'dangerously',cookieJar:jar,virtualConsole:consoleEvents,beforeParse(w){
-   w.matchMedia=()=>({matches:false});w.confirm=()=>true;
+   w.matchMedia=()=>({matches:false,addEventListener(){},removeEventListener(){}});w.confirm=()=>true;
    w.document.execCommand=()=>{w.copiedText=w.document.querySelector('#editor textarea').value;return true;};
    w.HTMLDialogElement.prototype.showModal=function(){this.setAttribute('open','');};
    w.HTMLDialogElement.prototype.close=function(){this.removeAttribute('open');};
@@ -50,3 +50,4 @@ async function availablePort() { const s=net.createServer(); await new Promise(r
   fs.rmSync(scratch,{recursive:true,force:true});
  }
 })().catch(e=>{console.error(e);process.exitCode=1;});
+

@@ -78,6 +78,13 @@ type Store struct {
 	dirty bool
 }
 
+// UserCount avoids copying every user and credential for dashboard polling.
+func (s *Store) UserCount() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return len(s.d.Users)
+}
+
 func Open(path string) (*Store, error) {
 	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
 		return nil, err
@@ -473,3 +480,4 @@ func (s *Store) CheckAdmin(username, password string) bool {
 	got := passwordHash(password, salt)
 	return subtle.ConstantTimeCompare(got, expected) == 1 && subtle.ConstantTimeCompare([]byte(username), []byte(a.Username)) == 1
 }
+

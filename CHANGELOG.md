@@ -1,3 +1,13 @@
+# 0.3.0-alpha (unreleased)
+
+- Add namedP native Windows UI with system/dark/light themes and animated dachshund.
+- Add independent Go client, TCP reliability and SOCKS5 TCP/UDP proxy.
+- Add full-device IPv4 TUN routing with server bypass, temporary DNS/IPv6 guards and cleanup guardian.
+- Fix missing user total usage in panel API and follow system theme by default.
+- Avoid copying all users and credentials just to count dashboard users.
+- Share the reliability module between client and server; add Windows CI packaging and release notes.
+- Windows network acceptance and CI validation pending; this entry does not mean a release has been published.
+
 # 0.2.2-alpha
 
 - Prefer verified Linux release binaries for remote install/update; reuse installed dependencies and remove mandatory install-time tests/compilation.
@@ -55,3 +65,4 @@
   injected-transport integration tests; acceptance guide for real VPS testing.
 
 No production or universal mobile-client compatibility claim is made.
+

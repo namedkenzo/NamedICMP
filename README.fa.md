@@ -1,5 +1,12 @@
 # namedICMP
 
+جدید در نسخه 0.3.0 آلفا: [کلاینت اختصاصی namedP برای ویندوز](docs/NAMEDP.md) با VPN کل سیستم روی IPv4 و پروکسی SOCKS5. وضعیت آزمون و محدودیت‌ها در [یادداشت انتشار](docs/RELEASE-v0.3.0-alpha.md) آمده است.
+
+نسخه و ریلیز این دو مستقل‌اند: پنل و سرور **namedICMP 0.3.0-alpha** با تگ
+`v0.3.0-alpha` و کلاینت ویندوز **namedP 0.1.0-alpha** با تگ
+`namedp-v0.1.0-alpha`. فایل ZIP ویندوز از ریلیز namedP دانلود می‌شود؛
+نصب‌کننده لینوکس فقط پنل و سرور را نصب می‌کند.
+
 **پنل مدیریت و هستهٔ مستقل Go برای انتقال TCP و UDP روی ICMP نسخهٔ ۴.**
 
 [English](README.md) · [دانلود ریلیزها](https://github.com/namedkenzo/NamedICMP/releases) · [راهنمای ویندوز](docs/WINDOWS.md)
@@ -104,3 +111,4 @@ bash scripts/build.sh
 - **TON:** `UQDPGgQWQb9j8pxC5_RIh2HbuTJjaIYSga7FXPLZWbyzTZJN`
 
 [مجوز MIT](LICENSE) · [اطلاعیه‌های وابستگی‌ها](THIRD_PARTY_NOTICES.md)
+
