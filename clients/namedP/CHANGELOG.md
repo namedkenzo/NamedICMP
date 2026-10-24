@@ -1,6 +1,6 @@
 # namedP changelog
 
-## 0.1.0-alpha (unreleased)
+## 0.1.0-alpha — 2026-10-24
 
 - First native Windows x64 client for namedICMP.
 - Full-device IPv4 VPN with TCP/UDP and local SOCKS5 proxy modes.

@@ -103,7 +103,7 @@ bash scripts/build.sh
 
 خروجی در `dist/` ساخته می‌شود. نصب از checkout محلی، همان سورس محلی را کامپایل می‌کند. برای اجبار روش نصب، `NAMEDICMP_INSTALL_MODE` را روی `source` یا `binary` قرار دهید؛ پیش‌فرض `auto` است. اجرای تست هنگام نصب از سورس با `NAMEDICMP_RUN_TESTS=1` ممکن است. `NAMEDICMP_REPO` و `NAMEDICMP_REF` تنظیمات اختیاری توسعه‌دهنده هستند؛ ref سفارشی در حالت خودکار از سورس ساخته می‌شود.
 
-گردش کار تگ، هر دو معماری را تست و می‌سازد و یک **پیش‌نویس prerelease** همراه با آرشیوها و checksum ایجاد می‌کند. پس از بازبینی آن را Publish کنید تا نصب سریع برای عموم فعال شود. [یادداشت انتشار](docs/RELEASE-v0.2.2-alpha.md)، [معماری](docs/ARCHITECTURE.md) و [امنیت](SECURITY.md).
+تگ‌های سرور (`v*`) پس از تست و ساخت هر دو معماری لینوکس، یک prerelease آلفا همراه checksum منتشر می‌کنند. تگ‌های کلاینت (`namedp-v*`) فایل ویندوز را در ریلیز جداگانه می‌سازند و منتشر می‌کنند. [یادداشت سرور](docs/RELEASE-v0.3.0-alpha.md)، [یادداشت کلاینت](docs/RELEASE-namedp-v0.1.0-alpha.md)، [معماری](docs/ARCHITECTURE.md) و [امنیت](SECURITY.md).
 
 ## حمایت از پروژه
 

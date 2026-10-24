@@ -1,4 +1,4 @@
-# 0.3.0-alpha (unreleased)
+# 0.3.0-alpha — 2026-10-24
 
 - Add namedP native Windows UI with system/dark/light themes and animated dachshund.
 - Add independent Go client, TCP reliability and SOCKS5 TCP/UDP proxy.
@@ -6,7 +6,7 @@
 - Fix missing user total usage in panel API and follow system theme by default.
 - Avoid copying all users and credentials just to count dashboard users.
 - Share the reliability module between client and server; add Windows CI packaging and release notes.
-- Windows network acceptance and CI validation pending; this entry does not mean a release has been published.
+- Linux CI and Windows build/UI checks passed. Windows/VPS network acceptance remains pending.
 
 # 0.2.2-alpha
 

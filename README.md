@@ -103,7 +103,7 @@ bash scripts/build.sh
 
 Archives appear in `dist/`. Local checkout installs build that checkout. Set `NAMEDICMP_INSTALL_MODE=source` to force a source build, `binary` to require release assets, or leave the default `auto`. Source installation can additionally run tests with `NAMEDICMP_RUN_TESTS=1`. `NAMEDICMP_REPO` and `NAMEDICMP_REF` are optional developer overrides; custom refs build from source in automatic mode.
 
-The tag workflow tests and builds both architectures, then creates a **draft prerelease** with archives and checksums. Review and publish it to make fast downloads publicly available. See [release notes and checklist](docs/RELEASE-v0.2.2-alpha.md), [architecture](docs/ARCHITECTURE.md) and [security](SECURITY.md).
+Server tags (`v*`) test and build both Linux architectures before publishing an alpha prerelease. Client tags (`namedp-v*`) build and publish a separate Windows archive. Both include checksums and their own release notes. See [server release notes](docs/RELEASE-v0.3.0-alpha.md), [client release notes](docs/RELEASE-namedp-v0.1.0-alpha.md), [architecture](docs/ARCHITECTURE.md) and [security](SECURITY.md).
 
 ## Support the project
 
