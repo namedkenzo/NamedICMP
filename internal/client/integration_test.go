@@ -71,7 +71,7 @@ func TestSOCKSUDPAssociationMultipleDestinations(t *testing.T){
  tunnel:=newTestTunnel(t,"aes256");ctx,cancel:=context.WithCancel(context.Background());defer cancel()
  // Reserve a free port, then let the actual SOCKS server bind it.
  reserve,e:=net.Listen("tcp4","127.0.0.1:0");if e!=nil{t.Fatal(e)};port:=reserve.Addr().(*net.TCPAddr).Port;reserve.Close()
- ready:=make(chan struct{});go tunnel.ServeSOCKS(ctx,port,func(){close(ready)})();select{case <-ready:case <-time.After(2*time.Second):t.Fatal("SOCKS startup")}
+ ready:=make(chan struct{});go tunnel.ServeSOCKS(ctx,port,func(){close(ready)});select{case <-ready:case <-time.After(2*time.Second):t.Fatal("SOCKS startup")}
  control,e:=net.Dial("tcp4",fmt.Sprintf("127.0.0.1:%d",port));if e!=nil{t.Fatal(e)};defer control.Close();control.SetDeadline(time.Now().Add(5*time.Second))
  writeAll(control,[]byte{5,1,0});var method [2]byte;io.ReadFull(control,method[:]);if method!=[2]byte{5,0}{t.Fatal("SOCKS method")}
  writeAll(control,[]byte{5,3,0,1,0,0,0,0,0,0});var reply [10]byte;if _,e=io.ReadFull(control,reply[:]);e!=nil || reply[1]!=0{t.Fatal("UDP association",e)}
