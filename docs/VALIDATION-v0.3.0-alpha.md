@@ -16,7 +16,7 @@ Base: main commit 802dc1e5f5da30a752dbab46ec77bfaaefd3d58f.
 - Local JS/Bash/XML syntax and version-contract checks.
 
 Evidence: [Linux and panel CI](https://github.com/namedkenzo/NamedICMP/actions/runs/40122970355),
-[Windows and client CI](https://github.com/namedkenzo/NamedICMP/actions/runs/40122860869).
+[Windows and published client](https://github.com/namedkenzo/NamedICMP/actions/runs/40123144447).
 Final publication workflows repeat the build and checks for their release commit.
 
 ## Independent distributions
