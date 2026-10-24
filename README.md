@@ -1,87 +1,68 @@
-# namedICMP
+# NamedICMP
 
-New in 0.3.0: [namedP for Windows](docs/NAMEDP.md), a dedicated native client with full-device IPv4 VPN and local SOCKS5 modes. See [release notes](docs/RELEASE-v0.3.0.md) for validation status and limitations.
+**A clean control panel and independent server for TCP/UDP tunneling over ICMP.**
 
-The web panel/server and Windows client have independent versions and releases:
-**namedICMP 0.3.0** (`v0.3.0`) and **namedP 0.1.0-alpha**
-(`namedp-v0.1.0-alpha`). Download the Windows ZIP from the namedP release;
-the Linux installer only installs the server and web panel.
+[![Latest release](https://img.shields.io/github/v/release/namedkenzo/NamedICMP?color=2ea44f)](https://github.com/namedkenzo/NamedICMP/releases/latest)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![Platform](https://img.shields.io/badge/server-Linux-amd64%20%7C%20arm64)](#quick-install)
 
-**A self-hosted web panel and independent Go core for TCP/UDP tunneling over IPv4 ICMP.**
+[فارسی](README.fa.md) · [Server releases](https://github.com/namedkenzo/NamedICMP/releases) · [Client apps → NamedClients](https://github.com/namedkenzo/NamedClients) · [Architecture](docs/ARCHITECTURE.md)
 
-[فارسی](README.fa.md) · [Releases](https://github.com/namedkenzo/NamedICMP/releases) · [Windows clients](docs/WINDOWS.md)
+## What lives here?
 
-Manage users, traffic allowances, expiry dates and outbound proxies from one English/Persian dashboard. The panel and tunnel core run as a single Linux service; no Node.js, database server or separate PingTunnel server is needed.
+**This repository is the web panel and Linux tunnel server.** The panel and independent Go core run as one systemd service, with no Node.js runtime, external database server or separate PingTunnel executable.
+
+**Windows and Android client apps belong in [NamedClients](https://github.com/namedkenzo/NamedClients).** Client versions and downloads are managed there independently. Android is planned; no namedP Android APK is available yet.
 
 ## Features
 
-- Independent TCP and UDP sessions over ICMP, with per-user usage accounting.
-- Enable/disable users, set expiry dates and traffic quotas, and export connection links.
-- Choose **one credential per user**: a numeric access key **or** AES-128-GCM, AES-256-GCM or ChaCha20-Poly1305 with a generated encryption key.
-- Direct connections, SOCKS5 outbounds (TCP/UDP), and HTTP CONNECT outbounds (TCP).
-- English/Persian interface, dark/light themes, server metrics and tunnel diagnostics.
-- systemd management, optional HTTPS with Certbot, and updates with backups and binary rollback on failed health checks.
+- **Users:** separate credentials and traffic accounting, quotas, expiry dates and live enable/disable.
+- **Transport:** independent TCP/UDP sessions over IPv4 ICMP; direct, SOCKS5 and HTTP CONNECT outbounds.
+- **Dashboard:** English/Persian, system-aware dark/light themes, server metrics and tunnel diagnostics.
+- **Management:** interactive installer, optional Certbot HTTPS, backups, health checks and update rollback.
+- **Credentials:** numeric key without encryption, or AES-128-GCM / AES-256-GCM / ChaCha20-Poly1305 with an encryption key.
 
-The server implements the PingTunnel wire format independently. It does not bundle a PingTunnel executable. Client capabilities and versions still determine end-to-end compatibility.
+## Quick install
 
-## Install
-
-Use a **Debian/Ubuntu server with systemd**, root access, public IPv4 connectivity and Linux **amd64 or arm64**. Allow IPv4 ICMP and your chosen panel TCP port in the server/provider firewall.
-
-Run in an interactive root shell:
+Use **Debian/Ubuntu with systemd**, root access and public IPv4. Linux **amd64 and arm64** are supported. Allow ICMP and the chosen panel TCP port in your host/provider firewall.
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/namedkenzo/NamedICMP/main/install.sh -o /tmp/namedicmp-install.sh
 bash /tmp/namedicmp-install.sh
 ```
 
-Select **1 — Install**, then enter the panel port, public server address and administrator credentials. The repository is already set to `namedkenzo/NamedICMP`; there is no repository prompt.
+Choose **1 — Install** and enter the panel port, server address and administrator credentials. The repository is preset; no repository-name prompt is needed.
 
-Remote installations prefer the matching release archive and verify its SHA-256 checksum and executable version. This avoids downloading Go and compiling on the server. If release downloads are unavailable, automatic mode builds from source and explains the fallback. Invalid checksums stop installation. Installation time depends on the network and APT; no fixed timing is promised.
+The installer selects the exact Linux release for the server architecture, verifies SHA-256 and the executable version, and installs **only the server and panel**. It never downloads the Windows ZIP/EXE or an Android APK. If binaries are unavailable, automatic mode can build the selected server source.
 
-The installer installs missing OS dependencies only. It disables ordinary kernel echo replies to prevent duplicate tunnel responses; removal restores the recorded setting when applicable. The selected HTTPS/HTTP address is displayed after setup. For HTTPS, the domain must resolve to the server and TCP port 80 must be free and reachable for Certbot. For localhost HTTP access, use the SSH tunnel printed by the installer.
+HTTPS uses Certbot; your domain must resolve to the server and TCP 80 must be free and reachable. HTTP can bind publicly or use localhost with the printed SSH-tunnel command. Panel HTTPS and tunnel encryption are independent.
 
-Reopen the manager:
+Reopen management with `namedicmp`. To upgrade, run the latest installer above and choose **2 — Update**. Users, usage, credentials, quotas and TLS settings are preserved; active tunnels reconnect once. Failed health checks restore the previous binary.
 
-```bash
-namedicmp
-```
+## Choose a client
 
-## Update
+Create a user in **Users**, open **Config**, then copy the complete connection URI.
 
-Run the **new installer from the command above**, then select **2 — Update**. This is also the upgrade path from an older installed manager. Users, usage, quotas, administrator credentials and TLS settings are preserved. Updating restarts active tunnels once; a failed health check restores the previous binary. Backups are stored in `/var/lib/namedicmp/backups`.
+| Client | Where to get it | Notes |
+| --- | --- | --- |
+| **namedP — Windows** | [NamedClients](https://github.com/namedkenzo/NamedClients) · [Downloads](https://github.com/namedkenzo/NamedClients/releases) | Our dedicated app; VPN and SOCKS5 modes; currently alpha |
+| **namedP — Android** | [Android development](https://github.com/namedkenzo/NamedClients/tree/main/android) | Planned; not yet built |
+| **Original PingTunnel CLI** | [esrrhs/pingtunnel](https://github.com/esrrhs/pingtunnel) · [Releases](https://github.com/esrrhs/pingtunnel/releases) | Upstream command-line client; choose the matching OS build |
+| **Community PingTunnel Client** | [itismoej/pingtunnel-client](https://github.com/itismoej/pingtunnel-client) · [Releases](https://github.com/itismoej/pingtunnel-client/releases) | Android/desktop GUI; linked from the upstream PingTunnel project |
+| **Ping Tunnel — iOS** | [App Store](https://apps.apple.com/us/app/ping-tunnel-vpn-over-icmp/id6748279683) | Check the installed version's supported modes |
 
-**Upgrading encrypted users from 0.2.1:** copy/import their connection profiles again. Encrypted connections now omit the numeric password. Old commands combining `-key` and encryption must be replaced. Numeric-only profiles remain valid.
+Upstream/community clients are separate projects. Compatibility depends on the client version and features; encryption requires the selected algorithm and raw Base64-key support. [Windows troubleshooting](docs/WINDOWS.md).
 
-## Connect a client
-
-Create a user in **Users**, select the credential mode, then open **Config** and copy the connection link or CLI command.
-
-| User mode | Client settings |
+| User mode | Client credential |
 | --- | --- |
-| Numeric key (`none`) | Server + numeric key; encryption off |
-| Encrypted | Server + encryption mode + Base64 encryption key; no numeric password |
+| Numeric / no encryption | Server + numeric key; encryption off |
+| Encrypted | Server + algorithm + Base64 encryption key; **no numeric password** |
 
-Changing the mode replaces the active credential method and reconnects that user's sessions. Encryption-only users have an internal routing ID in server storage; it is not a client password and is never exported as one. Numeric keys alone do **not** encrypt traffic. Panel HTTPS and tunnel encryption are separate settings.
+Changing credential mode reconnects that user's sessions. Numeric keys do not encrypt traffic. Encrypted users' internal routing IDs are never client passwords. Old 0.2.1 profiles combining numeric and encryption credentials must be exported again.
 
-- **Desktop CLI:** [upstream PingTunnel releases](https://github.com/esrrhs/pingtunnel/releases). Windows builds exist; run the client as Administrator. Encryption requires a build exposing `-encrypt` and `-encrypt-key`.
-- **Android / desktop GUI:** [community PingTunnel Client](https://github.com/itismoej/pingtunnel-client/releases). Its encryption mode uses the encryption key instead of the numeric key.
-- **iOS:** [Ping Tunnel](https://apps.apple.com/us/app/ping-tunnel-vpn-over-icmp/id6748279683). Check the installed app's supported credential modes before choosing encryption.
+**UDP requires support from the client, application and outbound. HTTP CONNECT outbounds are TCP-only.** A SOCKS proxy only covers apps configured to use it; full-device VPN is a client-side feature.
 
-For Windows diagnosis, CLI examples, and the scope of a possible namedICMP client, see [Windows guide](docs/WINDOWS.md). SOCKS proxy mode affects apps configured to use that proxy; it does not automatically route the whole device. UDP also requires support from the client, consuming app and outbound proxy. HTTP CONNECT outbounds cannot carry UDP.
-
-## Troubleshooting
-
-| Symptom | Check |
-| --- | --- |
-| Installation builds slowly | The matching release assets may be missing or unreachable. Publish both Linux archives and `SHA256SUMS`; source fallback is slower. |
-| Download/checksum failure | Check access to GitHub release assets; retry after fixing the download. Do not bypass checksum verification. |
-| Panel unavailable | Manager **Status** and **Recent logs**, panel port conflicts, bind address and firewall rules. |
-| Certbot fails | Public DNS, inbound TCP 80, and another service already using port 80. Retry **SSL certificate** after correcting the cause. |
-| Client cannot connect | Matching credential mode, client administrator/raw-socket permissions, IPv4 ICMP connectivity and cloud firewall. |
-| TCP works but UDP fails | Check client UDP support and SOCKS5 UDP ASSOCIATE support; HTTP outbounds support TCP only. |
-
-Configuration: `/etc/namedicmp/config.json`. User state: `/var/lib/namedicmp/state.json`. Avoid running two server instances against the same state file. Useful commands:
+## Operations & troubleshooting
 
 ```bash
 systemctl status namedicmp --no-pager
@@ -89,26 +70,36 @@ journalctl -u namedicmp -n 60 --no-pager
 /opt/namedicmp/namedicmp diagnostics
 ```
 
-## Build and release
+| Symptom | Check |
+| --- | --- |
+| Slow source build | Matching Linux release assets and SHA256SUMS must be available; source fallback is slower |
+| Panel unavailable | Bind address, chosen port, conflicts, firewall and Recent logs |
+| Certbot failure | Public DNS, free/reachable TCP 80 and existing web services |
+| Client cannot connect | Credentials, ICMP reachability, client permissions and provider firewall |
+| TCP works; UDP fails | Application/client UDP support and SOCKS5 UDP ASSOCIATE; HTTP outbounds cannot carry UDP |
 
-Go **1.26+** is required for source builds. Node.js is only used for optional development UI tests.
+Configuration: `/etc/namedicmp/config.json` · State: `/var/lib/namedicmp/state.json` · Backups: `/var/lib/namedicmp/backups`. Do not run two instances against the same state file. The installer records/restores kernel echo-reply suppression where applicable. Never bypass checksum validation.
+
+## Development
+
+Go **1.26+**; Node.js is only needed for optional panel DOM tests.
 
 ```bash
 go test -race ./...
 go vet ./...
+node scripts/test_versions.cjs
 bash scripts/test_installer.sh
 bash scripts/test_update.sh
 bash scripts/build.sh
 ```
 
-Archives appear in `dist/`. Local checkout installs build that checkout. Set `NAMEDICMP_INSTALL_MODE=source` to force a source build, `binary` to require release assets, or leave the default `auto`. Source installation can additionally run tests with `NAMEDICMP_RUN_TESTS=1`. `NAMEDICMP_REPO` and `NAMEDICMP_REF` are optional developer overrides; custom refs build from source in automatic mode.
+Linux archives are written to `dist/`. Use `NAMEDICMP_INSTALL_MODE=source`, `binary` or the default `auto`. Source tests can be enabled with `NAMEDICMP_RUN_TESTS=1`; repository/ref overrides are for development. Windows/Android build workflows are maintained in **NamedClients**, not here.
 
-Server tags (`v*`) test and build both Linux architectures before publishing a server release (stable versions are marked Latest). Client tags (`namedp-v*`) build and publish a separate Windows archive. Both include checksums and their own release notes. See [server release notes](docs/RELEASE-v0.3.0.md), [client release notes](docs/RELEASE-namedp-v0.1.0-alpha.md), [architecture](docs/ARCHITECTURE.md) and [security](SECURITY.md).
+[Security](SECURITY.md) · [Server release notes](docs/RELEASE-v0.3.0.md) · [Architecture](docs/ARCHITECTURE.md) · [Third-party notices](THIRD_PARTY_NOTICES.md)
 
-## Support the project
+## Support
 
 - **TRX (Tron):** `TYbWTzdjVM3HpqkGiUX7GGV2XgK6QDJQis`
 - **TON:** `UQDPGgQWQb9j8pxC5_RIh2HbuTJjaIYSga7FXPLZWbyzTZJN`
 
-[MIT License](LICENSE) · [Third-party notices](THIRD_PARTY_NOTICES.md)
-
+[MIT License](LICENSE)

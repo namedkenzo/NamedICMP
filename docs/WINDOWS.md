@@ -1,5 +1,8 @@
 # Windows clients and diagnosis
 
+**namedP is maintained in [NamedClients](https://github.com/namedkenzo/NamedClients).** Download and build client applications there. This page covers connecting third-party clients to the namedICMP server.
+
+
 ## Existing clients
 
 There is already a standalone Windows CLI in [esrrhs/pingtunnel releases](https://github.com/esrrhs/pingtunnel/releases). The [community Flutter GUI](https://github.com/itismoej/pingtunnel-client/releases) is a separate desktop application built around a PingTunnel executable and, in VPN mode, tun2socks.
@@ -49,11 +52,9 @@ This is a server compatibility fix. It does not establish the cause of every Win
 
 The inspected GUI VPN path invokes tun2socks with a Wintun device and PowerShell scripts that change the default route and DNS. Its Windows route script does not itself add a physical host route for the tunnel server. Whether that causes a problem depends on the full route table and interface binding; it needs a real Windows test. Keep the server's panel/service logs and client error text when diagnosing, and remove credentials before sharing them.
 
-## Could namedICMP have a simple Windows client?
+## Dedicated namedP client
 
-Yes. A small dedicated GUI could import the panel URI, enforce one credential method, start/stop an existing compatible CLI, show its logs and expose a local SOCKS proxy. That is a practical first version and avoids implementing the transport again.
-
-A full-device VPN adds Wintun packaging, elevated adapter and route/DNS changes, server-route exclusion, cleanup after crashes and separate UDP testing. A new independent tunnel engine would also need its own TCP reliability and interoperability tests. This release does not ship a new Windows executable, and was not tested on a Windows machine.
+The dedicated Windows UI, engine and VPN guardian have moved to [NamedClients](https://github.com/namedkenzo/NamedClients). Its code and releases are separate from this server repository. namedP remains alpha and requires real-network Windows acceptance; the server's stable status does not promote the client to stable.
 
 ## Inspected primary sources
 
@@ -68,3 +69,4 @@ A full-device VPN adds Wintun packaging, elevated adapter and route/DNS changes,
 کلاینت خط فرمان مستقل برای ویندوز موجود است. ابتدا آن را با **Run as Administrator** و حالت SOCKS امتحان کنید. برای کاربر رمزنگاری‌شده فقط الگوریتم و کلید رمزنگاری را وارد کنید و رمز عددی نگذارید. در نسخهٔ 0.2.2 لینک اتصال این اطلاعات را کامل دارد؛ کانفیگ‌های رمزنگاری قدیمی را دوباره وارد کنید.
 
 اگر SOCKS کار کرد ولی VPN کار نکرد، بررسی Wintun، مجوز مدیر، DNS و مسیر شبکه لازم است. اصلاح این ریلیز ناسازگاری احراز هویت سرور را برطرف می‌کند؛ تست واقعی روی ویندوز انجام نشده است. ساخت رابط سادهٔ اختصاصی با واردکردن لینک، اتصال/قطع و نمایش لاگ ممکن است؛ VPN کل سیستم کار و تست جداگانه می‌خواهد.
+

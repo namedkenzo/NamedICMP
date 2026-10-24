@@ -1,14 +1,6 @@
 # Third-party notices
 
-## namedP Windows distribution
-
-The namedP UI and client transport are authored in this repository. Windows
-archives additionally bundle .NET 8 (Microsoft, MIT), tun2socks v2.6.0
-(xjasonlyu, MIT, including its Go module dependencies), and Wintun 0.14.1
-(WireGuard). Their licenses and the TUN executable module inventory are included
-alongside the executables. The Wintun supplier signature is checked during CI.
-See the bundled WINTUN-LICENSE.txt for redistribution terms. No PingTunnel
-executable or source from itismoej/pingtunnel-client is bundled.
+Client applications and their Windows/Android distribution dependencies are maintained separately in https://github.com/namedkenzo/NamedClients. They are not bundled in this server source tree or Linux release archives.
 
 namedICMP is original MIT-licensed application code. The source tree does not
 vendor PingTunnel, gohome, 3x-ui or their generated protocol files.

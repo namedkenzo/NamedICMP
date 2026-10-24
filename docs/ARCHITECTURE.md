@@ -1,6 +1,6 @@
 # Architecture and wire contract
 
-Server release: 0.3.0. The independently versioned namedP Windows client is 0.1.0-alpha. Client and server share the original codec and selective-repeat package in this repository; they are separate executables. No upstream PingTunnel/gohome/3x-ui sources or binaries are distributed.
+Server release: 0.3.0. The independently versioned namedP Windows client is 0.1.0-alpha. Clients are maintained in namedkenzo/NamedClients as a separate Go module, with compatible codec/reliability implementations and CI against a pinned server reference. This repository contains the web panel and Linux server only. No upstream PingTunnel/gohome/3x-ui sources or binaries are distributed.
 
 ## Data flow
 
