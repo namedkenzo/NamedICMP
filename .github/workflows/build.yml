@@ -18,14 +18,17 @@ jobs:
       - run: go vet ./...
       - run: bash scripts/test_installer.sh
       - run: bash scripts/test_update.sh
+      - run: node scripts/test_versions.cjs
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm run test:ui
       - run: bash scripts/build.sh
       - uses: actions/upload-artifact@v7
         with:
           name: namedicmp-linux-builds
           path: dist/*
           retention-days: 30
-      - name: Publish server prerelease with installer assets
-        if: startsWith(github.ref, 'refs/tags/v') || (github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[release-v0.3.0-alpha]'))
+      - name: Publish server release with installer assets
+        if: startsWith(github.ref, 'refs/tags/v') || (github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[release-server]'))
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ github.ref_name }}
@@ -37,5 +40,9 @@ jobs:
             test "$RELEASE_TAG" = "$server_tag"
           fi
           rm -rf "$version_dir"
-          gh release create "$server_tag" dist/* --target "$GITHUB_SHA" --prerelease --title "namedICMP $server_tag · Server and panel" --notes-file "docs/RELEASE-${server_tag}.md"
+          release_flags=(--latest)
+          if [[ "$server_tag" == *-* ]]; then
+            release_flags=(--prerelease)
+          fi
+          gh release create "$server_tag" dist/* --target "$GITHUB_SHA" "${release_flags[@]}" --title "namedICMP $server_tag · Server and panel" --notes-file "docs/RELEASE-${server_tag}.md"
 

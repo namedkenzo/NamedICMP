@@ -1,3 +1,10 @@
+# 0.3.0 — 2026-10-24
+
+- Promote the server and web panel to a stable release, published as Latest.
+- Align the binary, installer, panel API/UI and package metadata to 0.3.0.
+- Keep namedP independently versioned at 0.1.0-alpha and distributed separately.
+- Preserve the tested 0.3.0-alpha server functionality; no new transport changes.
+
 # 0.3.0-alpha — 2026-10-24
 
 - Add namedP native Windows UI with system/dark/light themes and animated dachshund.

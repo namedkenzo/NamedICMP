@@ -7,7 +7,7 @@ The project owner should enable GitHub private vulnerability reporting before
 publishing the repository. Until then, use a private contact method chosen by
 that owner. No maintainer address is invented in this source package.
 
-This is an alpha release. The transport uses the PingTunnel IPv4 wire contract
+The server transport uses the PingTunnel IPv4 wire contract
 with a positive 31-bit numeric access key in plaintext mode. **Encryption defaults to none**,
 including existing users. In that mode the access key and traffic are visible
 on the network; the numeric key is an interoperability credential, not strong
@@ -33,3 +33,4 @@ CSRF. The management socket is local and 0600. Outbound credentials are stored
 in the protected state file because proxy negotiation needs the originals.
 Encryption secrets and update backups are also protected local state. Avoid
 granting untrusted accounts read access to those files or the service account.
+

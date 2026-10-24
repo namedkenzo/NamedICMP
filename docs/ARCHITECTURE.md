@@ -1,6 +1,6 @@
 # Architecture and wire contract
 
-Server release: 0.3.0-alpha. The independently versioned namedP Windows client is 0.1.0-alpha. Client and server share the original codec and selective-repeat package in this repository; they are separate executables. No upstream PingTunnel/gohome/3x-ui sources or binaries are distributed.
+Server release: 0.3.0. The independently versioned namedP Windows client is 0.1.0-alpha. Client and server share the original codec and selective-repeat package in this repository; they are separate executables. No upstream PingTunnel/gohome/3x-ui sources or binaries are distributed.
 
 ## Data flow
 

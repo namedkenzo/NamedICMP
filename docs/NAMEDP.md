@@ -35,7 +35,7 @@ still depends on your server outbound, ICMP network and consuming application.
 ## Status and verification
 
 The client version is **namedP 0.1.0-alpha**, independently versioned from
-the namedICMP server (currently 0.3.0-alpha). Client tags use `namedp-v*`, while
+the namedICMP server (currently 0.3.0). Client tags use `namedp-v*`, while
 server tags use `v*`. The client has a separate release and download archive.
 This is not a claim of bug-free VPN operation. CI builds Windows
 and Linux, tests protocol/profile behavior and renders both themes. A public-server

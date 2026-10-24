@@ -1,9 +1,9 @@
 # namedICMP
 
-New in 0.3.0 alpha: [namedP for Windows](docs/NAMEDP.md), a dedicated native client with full-device IPv4 VPN and local SOCKS5 modes. See [release notes](docs/RELEASE-v0.3.0-alpha.md) for validation status and limitations.
+New in 0.3.0: [namedP for Windows](docs/NAMEDP.md), a dedicated native client with full-device IPv4 VPN and local SOCKS5 modes. See [release notes](docs/RELEASE-v0.3.0.md) for validation status and limitations.
 
 The web panel/server and Windows client have independent versions and releases:
-**namedICMP 0.3.0-alpha** (`v0.3.0-alpha`) and **namedP 0.1.0-alpha**
+**namedICMP 0.3.0** (`v0.3.0`) and **namedP 0.1.0-alpha**
 (`namedp-v0.1.0-alpha`). Download the Windows ZIP from the namedP release;
 the Linux installer only installs the server and web panel.
 
@@ -103,7 +103,7 @@ bash scripts/build.sh
 
 Archives appear in `dist/`. Local checkout installs build that checkout. Set `NAMEDICMP_INSTALL_MODE=source` to force a source build, `binary` to require release assets, or leave the default `auto`. Source installation can additionally run tests with `NAMEDICMP_RUN_TESTS=1`. `NAMEDICMP_REPO` and `NAMEDICMP_REF` are optional developer overrides; custom refs build from source in automatic mode.
 
-Server tags (`v*`) test and build both Linux architectures before publishing an alpha prerelease. Client tags (`namedp-v*`) build and publish a separate Windows archive. Both include checksums and their own release notes. See [server release notes](docs/RELEASE-v0.3.0-alpha.md), [client release notes](docs/RELEASE-namedp-v0.1.0-alpha.md), [architecture](docs/ARCHITECTURE.md) and [security](SECURITY.md).
+Server tags (`v*`) test and build both Linux architectures before publishing a server release (stable versions are marked Latest). Client tags (`namedp-v*`) build and publish a separate Windows archive. Both include checksums and their own release notes. See [server release notes](docs/RELEASE-v0.3.0.md), [client release notes](docs/RELEASE-namedp-v0.1.0-alpha.md), [architecture](docs/ARCHITECTURE.md) and [security](SECURITY.md).
 
 ## Support the project
 
