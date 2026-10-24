@@ -4,7 +4,7 @@
 
 [![Latest release](https://img.shields.io/github/v/release/namedkenzo/NamedICMP?color=2ea44f)](https://github.com/namedkenzo/NamedICMP/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
-[![Platform](https://img.shields.io/badge/server-Linux-amd64%20%7C%20arm64)](#quick-install)
+[![Platform](https://img.shields.io/badge/Linux-amd64%20%7C%20arm64-555555?logo=linux&logoColor=white)](#quick-install)
 
 [فارسی](README.fa.md) · [Server releases](https://github.com/namedkenzo/NamedICMP/releases) · [Client apps → NamedClients](https://github.com/namedkenzo/NamedClients) · [Architecture](docs/ARCHITECTURE.md)
 
@@ -12,7 +12,7 @@
 
 **This repository is the web panel and Linux tunnel server.** The panel and independent Go core run as one systemd service, with no Node.js runtime, external database server or separate PingTunnel executable.
 
-**Windows and Android client apps belong in [NamedClients](https://github.com/namedkenzo/NamedClients).** Client versions and downloads are managed there independently. Android is planned; no namedP Android APK is available yet.
+**Windows and Android client apps belong in [NamedClients](https://github.com/namedkenzo/NamedClients).** Client versions and downloads are managed there independently. The initial Android app is available as a debug-signed development APK; it remains alpha.
 
 ## Features
 
@@ -46,7 +46,7 @@ Create a user in **Users**, open **Config**, then copy the complete connection U
 | Client | Where to get it | Notes |
 | --- | --- | --- |
 | **namedP — Windows** | [NamedClients](https://github.com/namedkenzo/NamedClients) · [Downloads](https://github.com/namedkenzo/NamedClients/releases) | Our dedicated app; VPN and SOCKS5 modes; currently alpha |
-| **namedP — Android** | [Android development](https://github.com/namedkenzo/NamedClients/tree/main/android) | Planned; not yet built |
+| **namedP — Android** | [Android guide](https://github.com/namedkenzo/NamedClients/tree/main/android) · [Development APK](https://github.com/namedkenzo/NamedClients/releases/tag/android-v0.1.0-alpha) | Initial alpha; debug-signed; real-phone/VPS acceptance pending |
 | **Original PingTunnel CLI** | [esrrhs/pingtunnel](https://github.com/esrrhs/pingtunnel) · [Releases](https://github.com/esrrhs/pingtunnel/releases) | Upstream command-line client; choose the matching OS build |
 | **Community PingTunnel Client** | [itismoej/pingtunnel-client](https://github.com/itismoej/pingtunnel-client) · [Releases](https://github.com/itismoej/pingtunnel-client/releases) | Android/desktop GUI; linked from the upstream PingTunnel project |
 | **Ping Tunnel — iOS** | [App Store](https://apps.apple.com/us/app/ping-tunnel-vpn-over-icmp/id6748279683) | Check the installed version's supported modes |

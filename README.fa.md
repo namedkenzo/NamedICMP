@@ -11,7 +11,7 @@
 
 این مخزن مخصوص **وب‌پنل و هستهٔ سرور لینوکس** است. پنل و هستهٔ مستقل Go در یک سرویس systemd اجرا می‌شوند و به Node.js، دیتابیس خارجی یا اجرای جداگانهٔ PingTunnel نیاز ندارند.
 
-کلاینت‌های ویندوز و اندروید در مخزن مستقل **[NamedClients](https://github.com/namedkenzo/NamedClients)** نگهداری می‌شوند. نسخه و دانلود کلاینت‌ها مستقل از پنل است. نسخهٔ اندروید namedP هنوز ساخته نشده است.
+کلاینت‌های ویندوز و اندروید در مخزن مستقل **[NamedClients](https://github.com/namedkenzo/NamedClients)** نگهداری می‌شوند. نسخه و دانلود کلاینت‌ها مستقل از پنل است. نسخهٔ اولیهٔ اندروید namedP به‌صورت APK آزمایشی با امضای توسعه موجود است و همچنان آلفاست.
 
 ## امکانات
 
@@ -46,7 +46,7 @@ bash /tmp/namedicmp-install.sh
 | کلاینت | دریافت | توضیح |
 | --- | --- | --- |
 | **namedP ویندوز** | [NamedClients](https://github.com/namedkenzo/NamedClients) · [دانلود](https://github.com/namedkenzo/NamedClients/releases) | کلاینت اختصاصی با VPN و SOCKS5؛ فعلاً آلفا |
-| **namedP اندروید** | [محل توسعهٔ اندروید](https://github.com/namedkenzo/NamedClients/tree/main/android) | در برنامهٔ توسعه؛ هنوز ساخته نشده |
+| **namedP اندروید** | [راهنما](https://github.com/namedkenzo/NamedClients/tree/main/android) · [APK آزمایشی](https://github.com/namedkenzo/NamedClients/releases/tag/android-v0.1.0-alpha) | آلفا با امضای توسعه؛ نیازمند تست گوشی و سرور واقعی |
 | **خط فرمان اصلی PingTunnel** | [esrrhs/pingtunnel](https://github.com/esrrhs/pingtunnel) · [Releases](https://github.com/esrrhs/pingtunnel/releases) | کلاینت اصلی؛ فایل مناسب سیستم‌عامل را انتخاب کنید |
 | **رابط گرافیکی جامعهٔ PingTunnel** | [itismoej/pingtunnel-client](https://github.com/itismoej/pingtunnel-client) · [Releases](https://github.com/itismoej/pingtunnel-client/releases) | اندروید و دسکتاپ؛ در پروژهٔ اصلی PingTunnel نیز معرفی شده است |
 | **Ping Tunnel برای iOS** | [App Store](https://apps.apple.com/us/app/ping-tunnel-vpn-over-icmp/id6748279683) | پشتیبانی حالت‌های اتصال را در نسخهٔ نصب‌شده بررسی کنید |
