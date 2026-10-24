@@ -40,6 +40,8 @@ async function availablePort() { const s=net.createServer(); await new Promise(r
   d.querySelector('[data-page="outbounds"]').click();d.querySelector('#add-outbound').click();d.querySelector('input[name="name"]').value='DOM-test-proxy';d.querySelector('input[name="host"]').value='127.0.0.1';submit('#editor-form');
   await wait(()=>!d.querySelector('#editor').hasAttribute('open'));await wait(()=>d.querySelector('#outbound-cards').textContent.includes('DOM-test-proxy'));
   d.querySelector('#app .language-toggle').click();if(d.documentElement.dir!=='ltr')throw new Error('English direction failed');
+  if(d.documentElement.dataset.theme!=='light')throw new Error('System light preference failed');
+  d.querySelector('#app .theme-toggle').click();if(d.documentElement.dataset.theme!=='dark')throw new Error('Dark mode failed');
   d.querySelector('#app .theme-toggle').click();if(d.documentElement.dataset.theme!=='light')throw new Error('Light mode failed');
   d.querySelector('[data-page="home"]').click();if(d.querySelector('#page-home').hidden)throw new Error('Navigation failed');
   d.querySelector('#logout').click();await wait(()=>!d.querySelector('#login').hidden);
