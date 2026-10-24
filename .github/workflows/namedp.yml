@@ -80,7 +80,10 @@ jobs:
           path: |
             dist/namedP-*-windows-x64.zip
             dist/SHA256SUMS
-            clients/namedP.Smoke/preview-*.png
+      - uses: actions/upload-artifact@v7
+        with:
+          name: namedP-ui-previews
+          path: clients/namedP.Smoke/preview-*.png
   release:
     if: github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/namedp-v') || (github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[release-namedp-v0.1.0-alpha]')))
     needs: [linux, windows]
