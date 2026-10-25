@@ -8,7 +8,7 @@ PREFIX=/opt/namedicmp
 CONFIG=/etc/namedicmp/config.json
 STATE=/var/lib/namedicmp
 GO_VERSION=1.27.3
-MANAGER_VERSION=0.4.0
+MANAGER_VERSION=0.4.1
 INSTALL_MODE="${NAMEDICMP_INSTALL_MODE:-auto}"
 workdir=""
 trap '[[ -z "$workdir" ]] || rm -rf -- "$workdir"' EXIT
@@ -72,7 +72,7 @@ PY
 install_service(){
  cat > /etc/systemd/system/namedicmp.service <<'UNIT'
 [Unit]
-Description=namedICMP independent ICMP tunnel and panel
+Description=namedICMP web management panel
 After=network-online.target
 Wants=network-online.target
 StartLimitIntervalSec=60
@@ -96,7 +96,7 @@ ProtectHome=true
 PrivateTmp=true
 ProtectKernelTunables=true
 ProtectControlGroups=true
-RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_PACKET
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_PACKET AF_NETLINK
 ReadWritePaths=/var/lib/namedicmp /run/namedicmp
 UMask=0077
 LimitNOFILE=65536
@@ -333,15 +333,129 @@ PY
 }
 change_port(){ require_installed;local panel_port bind_address;get_port panel_port;if [[ $panel_port == 80 ]] && python3 -c 'import json,sys;sys.exit(not bool(json.load(open("/etc/namedicmp/config.json"))["tls_cert"]))';then say 'Port 80 must remain available for Certbot renewal.';return 1;fi;bind_address=$(python3 -c 'import json;print(json.load(open("/etc/namedicmp/config.json"))["panel_listen"].rsplit(":",1)[0])');edit_config panel_listen "$bind_address:$panel_port";systemctl restart namedicmp.service;say "Panel port changed to $panel_port. Restarting the service reconnects existing tunnels."; }
 change_credentials(){ require_installed;systemctl is-active --quiet namedicmp.service || { say 'Start namedICMP first.';return 1; };credentials;credentials_json | "$PREFIX/namedicmp" admin;unset admin_password; }
+uninstall_stop_unit(){
+ local unit=$1 load state file_state
+ # A missing optional timer must never prevent the main service from stopping.
+ load=$(systemctl show "$unit" --property=LoadState --value) || { say "Cannot inspect $unit; uninstall stopped before removing files.";return 1; }
+ [[ $load != not-found ]] || return 0
+ [[ -n $load ]] || { say "Unknown load state for $unit; refusing to uninstall.";return 1; }
+ systemctl stop "$unit" || { say "Could not stop $unit. No installation files were removed.";return 1; }
+ state=$(systemctl show "$unit" --property=ActiveState --value) || return 1
+ case $state in inactive|failed);;*)say "$unit is still $state. No installation files were removed.";return 1;;esac
+ file_state=$(systemctl show "$unit" --property=UnitFileState --value) || return 1
+ case $file_state in static|indirect|disabled|masked|masked-runtime|generated|transient|'')return 0;;esac
+ systemctl disable "$unit" || { say "Could not disable $unit; uninstall stopped before removing files.";return 1; }
+}
+uninstall_stop_processes(){
+ # Recover orphaned/manual processes from older or partial uninstalls. Match
+ # the exact installed executable, including Linux's ' (deleted)' suffix;
+ # never kill by name, listening port, command-line substring or numeric PID alone.
+ python3 - "$PREFIX/namedicmp" <<'PY'
+import errno, os, signal, sys, time
+target = os.path.abspath(sys.argv[1])
+if target in ('/', '/namedicmp') or os.path.basename(os.path.dirname(target)) != 'namedicmp':
+    raise SystemExit('Unsafe executable path; refusing process cleanup')
+def identity(pid):
+    try:
+        executable = os.readlink(f'/proc/{pid}/exe')
+        if executable.endswith(' (deleted)'):
+            executable = executable[:-10]
+        if executable != target:
+            return None
+        # Field 22 is starttime; split after the final ')' in the comm field.
+        stat = open(f'/proc/{pid}/stat').read().rsplit(')', 1)[1].split()
+        return stat[19]
+    except FileNotFoundError:
+        return None
+    except ProcessLookupError:
+        return None
+def matching():
+    result = {}
+    for name in os.listdir('/proc'):
+        if name.isdecimal():
+            value = identity(int(name))
+            if value is not None:
+                result[int(name)] = value
+    return result
+def send(pid, started, sig):
+    if identity(pid) != started:
+        return
+    # pidfd binds the signal to this process and closes the PID-reuse race.
+    if not hasattr(os, 'pidfd_open') or not hasattr(signal, 'pidfd_send_signal'):
+        raise RuntimeError('A residual process remains; this Python/kernel lacks safe pidfd cleanup. Stop that exact executable manually and retry.')
+    try:
+        fd = os.pidfd_open(pid)
+    except ProcessLookupError:
+        return
+    try:
+        if identity(pid) == started:
+            signal.pidfd_send_signal(fd, sig)
+    finally:
+        os.close(fd)
+try:
+    processes = matching()
+    for pid, started in processes.items():
+        send(pid, started, signal.SIGTERM)
+    deadline = time.monotonic() + 5
+    while matching() and time.monotonic() < deadline:
+        time.sleep(.1)
+    for pid, started in matching().items():
+        send(pid, started, signal.SIGKILL)
+    deadline = time.monotonic() + 2
+    while matching() and time.monotonic() < deadline:
+        time.sleep(.1)
+    if matching():
+        raise RuntimeError('The installed executable is still running; refusing to remove files')
+except (OSError, RuntimeError) as error:
+    raise SystemExit(f'Process cleanup stopped: {error}')
+PY
+}
+uninstall_restore_network(){
+ if [[ -f $PREFIX/network_tuning.py ]];then
+  python3 "$PREFIX/network_tuning.py" restore || { say 'Network restore failed. Configuration and tuning backup retained; correct the error and retry uninstall.';return 1; }
+ fi
+ # The restore helper retains failed kernel writes in this ledger, even when
+ # its CLI exits successfully. Never let a later purge discard those originals.
+ if [[ -f /etc/namedicmp/network-tuning.json ]];then
+  python3 - <<'PY' || return 1
+import json
+with open('/etc/namedicmp/network-tuning.json') as stream:
+    state = json.load(stream)
+if state.get('values'):
+    raise SystemExit('Some network settings could not be restored. Tuning backup retained; resolve the warnings and retry uninstall.')
+PY
+ fi
+ if [[ -f /etc/sysctl.d/91-namedicmp-network.conf ]];then
+  say 'A manually edited namedICMP sysctl profile remains. Review /etc/sysctl.d/91-namedicmp-network.conf before retrying uninstall; no installation files were removed.'
+  return 1
+ fi
+ if [[ -f /etc/namedicmp/icmp-echo.previous ]];then
+  local previous;previous=$(cat /etc/namedicmp/icmp-echo.previous)
+  [[ $previous =~ ^[01]$ ]] || { say 'Invalid echo backup; refusing to discard it.';return 1; }
+  if [[ $(cat /proc/sys/net/ipv4/icmp_echo_ignore_all) == 1 ]];then sysctl -w "net.ipv4.icmp_echo_ignore_all=$previous" || return 1;fi
+  rm -f /etc/sysctl.d/90-namedicmp.conf
+ fi
+}
+uninstall_remove_files(){
+ [[ $PREFIX == /opt/namedicmp ]] || { say 'Unexpected installation prefix; refusing directory removal.';return 1; }
+ rm -f /etc/systemd/system/namedicmp.service /etc/systemd/system/namedicmp.socket /etc/systemd/system/namedicmp-renew.service /etc/systemd/system/namedicmp-renew.timer /etc/letsencrypt/renewal-hooks/deploy/namedicmp /usr/local/bin/namedicmp || return 1
+ rm -rf -- /opt/namedicmp
+}
+uninstall_remove_data(){ rm -rf -- /etc/namedicmp /var/lib/namedicmp; }
 uninstall(){
- require_installed;if ! yesno 'Uninstall namedICMP (user data is kept by default)?';then return;fi
- systemctl disable --now namedicmp.service namedicmp-renew.timer || true
- if [[ -f $PREFIX/network_tuning.py ]];then network_tuning restore || say 'Network tuning backup retained; restore it manually before removing retained data.';fi
- rm -f /etc/systemd/system/namedicmp.service /etc/systemd/system/namedicmp-renew.service /etc/systemd/system/namedicmp-renew.timer /etc/letsencrypt/renewal-hooks/deploy/namedicmp /usr/local/bin/namedicmp
- if [[ -f /etc/namedicmp/icmp-echo.previous ]];then local previous;previous=$(cat /etc/namedicmp/icmp-echo.previous);rm -f /etc/sysctl.d/90-namedicmp.conf;if [[ $previous =~ ^[01]$ && $(cat /proc/sys/net/ipv4/icmp_echo_ignore_all) == 1 ]];then sysctl -w "net.ipv4.icmp_echo_ignore_all=$previous";fi;fi
- rm -rf -- "$PREFIX";systemctl daemon-reload
- if yesno 'Permanently delete panel configuration, users and usage?';then rm -rf -- /etc/namedicmp /var/lib/namedicmp;else say 'Data retained in /etc/namedicmp and /var/lib/namedicmp. Move it aside for a fresh install.';fi
- say 'Uninstalled. Certificates and the service account are retained.'
+ # Do not require an intact executable/config: a partial older uninstall must
+ # still be recoverable by downloading and running the current installer.
+ if ! yesno 'Uninstall namedICMP (user data is kept by default)?';then return;fi
+ local unit state
+ for unit in namedicmp-renew.timer namedicmp.socket namedicmp-renew.service namedicmp.service;do uninstall_stop_unit "$unit" || return 1;done
+ uninstall_stop_processes || return 1
+ state=$(systemctl show namedicmp.service --property=ActiveState --value) || return 1
+ case $state in inactive|failed|'');;*)say "namedicmp.service is still $state; no installation files were removed.";return 1;;esac
+ uninstall_restore_network || return 1
+ uninstall_remove_files || return 1
+ systemctl daemon-reload || return 1
+ if yesno 'Permanently delete panel configuration, users and usage?';then uninstall_remove_data || return 1;else say 'Data retained in /etc/namedicmp and /var/lib/namedicmp. Move it aside for a fresh install.';fi
+ say 'Uninstalled. The panel process is stopped. Certificates and the service account are retained.'
 }
 status_namedicmp(){ require_installed;systemctl --no-pager --full status namedicmp.service || true;if systemctl is-active --quiet namedicmp.service;then "$PREFIX/namedicmp" diagnostics;fi; }
 start_namedicmp(){ require_installed;systemctl start namedicmp.service; }
@@ -367,7 +481,7 @@ if ':' in host and not host.startswith('['): host=f'[{host}]'
 print(f'  Panel: {scheme}://{host}:{port}')
 PY
  fi
- printf '  Transport: ICMPv4 · Independent TCP + UDP\n'
+ printf '  Transport: ICMPv4 / ICMPv6 · Independent TCP + UDP\n'
  printf '%b\n  SETUP%b\n' "$dim" "$reset"
  printf '  1   Install\n  2   Update · preserve users and settings\n'
  printf '%b\n  SERVICE%b\n' "$dim" "$reset"

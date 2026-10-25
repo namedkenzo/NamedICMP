@@ -101,7 +101,7 @@ bash scripts/build.sh
 
 Linux archives are written to `dist/`. Use `NAMEDICMP_INSTALL_MODE=source`, `binary` or the default `auto`. Source tests can be enabled with `NAMEDICMP_RUN_TESTS=1`; repository/ref overrides are for development. Windows/Android build workflows are maintained in **NamedClients**, not here.
 
-[Security](SECURITY.md) · [Panel release notes](docs/RELEASE-v0.4.0.md) · [Architecture](docs/ARCHITECTURE.md) · [Third-party notices](THIRD_PARTY_NOTICES.md)
+[Security](SECURITY.md) · [Panel release notes](docs/RELEASE-v0.4.1.md) · [Architecture](docs/ARCHITECTURE.md) · [Third-party notices](THIRD_PARTY_NOTICES.md)
 
 ## Support
 

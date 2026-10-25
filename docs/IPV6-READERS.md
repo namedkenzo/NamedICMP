@@ -13,6 +13,13 @@ installs skip reflection to avoid advertising a proxy IP. Disable panel reflecti
 with `NAMEDICMP_PUBLIC_IP_LOOKUP=0`. Use an explicit IP/domain for NAT/routed setups.
 Address detection does not establish external reachability.
 
+Version 0.4.1 fixes the service's missing AF_NETLINK permission, which could
+prevent interface discovery even when the VPS had IPv6. Update with the current
+installer (**2 — Update**) to refresh the systemd profile; restarting the old
+profile alone is insufficient. A local `/proc/net/if_inet6` fallback also supports
+discovery when interface enumeration is restricted. Unready, local-only and
+link-local addresses must not be exported as public automatic endpoints.
+
 ## Packet reading
 
 - Raw IP socket is the existing default.
