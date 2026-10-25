@@ -1,6 +1,6 @@
 # Architecture and wire contract
 
-Panel release: 0.3.0. The independently versioned namedP Windows client is 0.1.0-alpha. Clients are maintained in namedkenzo/NamedClients as a separate Go module, with compatible codec/reliability implementations and CI against a pinned server reference. This repository contains the web panel and its managed tunneling core only. No upstream PingTunnel/gohome/3x-ui sources or binaries are distributed.
+Panel release: 0.4.0. The independently versioned namedP Windows and Android clients are 0.2.0-alpha. Clients are maintained in namedkenzo/NamedClients as a separate Go module, with compatible codec/reliability implementations and CI against a pinned managed-core reference. This repository contains the web panel and its managed tunneling core only. No upstream PingTunnel/gohome/3x-ui sources or binaries are distributed. See [IPv6 and packet readers](IPV6-READERS.md) for the new connection settings and transport families.
 
 ## Data flow
 
@@ -69,7 +69,7 @@ The JSON snapshot approach is designed for a small or medium installation. Every
 - HTTP supports CONNECT with optional Basic proxy authentication. Buffered bytes received after the CONNECT headers and TCP half-close are preserved.
 - HTTP UDP fails explicitly; there is no fallback that bypasses the selected proxy.
 - Targets resolving to private, loopback, link-local or several special ranges are denied by default. `allow_private_targets=true` is for trusted intentional use and local tests.
-- Proxy hosts are administrator-controlled and may be local. Target DNS is resolved on the namedICMP server and sent numerically to proxies, preventing a proxy DNS re-resolution from changing the target. There is no remote-DNS option in this release. Special-range prefixes and SOCKS UDP headers are prepared outside the packet loop.
+- Proxy hosts are administrator-controlled and may be local. Target DNS is resolved by the panel's managed tunneling core and sent numerically to proxies, preventing a proxy DNS re-resolution from changing the target. There is no remote-DNS option in this release. Special-range prefixes and SOCKS UDP headers are prepared outside the packet loop.
 - Existing sessions retain their selected outbound snapshot; edits affect new sessions. Removing an assigned outbound is rejected.
 - End-to-end UDP requires the consuming program, ICMP client and chosen outbound to support UDP. Wrapping a TCP-only Shadowsocks transport inside TCP cannot create a UDP path. The server does not infer UDP from TCP application bytes.
 

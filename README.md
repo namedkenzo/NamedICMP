@@ -19,7 +19,7 @@
 - **Connection Settings:** IPv4/IPv6 endpoint selection, IP/domain override, automatic address discovery and an advanced Linux packet-reader option. Outbounds now have their own Settings tab. Home addresses stay masked until tapped. [IPv6 and reader notes](docs/IPV6-READERS.md).
 
 - **Users:** separate credentials and traffic accounting, quotas, expiry dates and live enable/disable.
-- **Transport:** independent TCP/UDP sessions over IPv4 ICMP; direct, SOCKS5 and HTTP CONNECT outbounds.
+- **Transport:** independent TCP/UDP sessions over ICMPv4 or ICMPv6; direct, SOCKS5 and HTTP CONNECT outbounds.
 - **Dashboard:** English/Persian, system-aware dark/light themes, server metrics and tunnel diagnostics.
 - **Management:** interactive installer, optional Certbot HTTPS, backups, health checks and update rollback.
 - **Credentials:** numeric key without encryption, or AES-128-GCM / AES-256-GCM / ChaCha20-Poly1305 with an encryption key.

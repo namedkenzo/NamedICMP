@@ -1,6 +1,6 @@
 # Windows clients and diagnosis
 
-**namedP is maintained in [NamedClients](https://github.com/namedkenzo/NamedClients).** Download and build client applications there. This page covers connecting third-party clients to the namedICMP server.
+**namedP is maintained in [NamedClients](https://github.com/namedkenzo/NamedClients).** Download and build client applications there. This page covers connecting third-party clients to the panel's managed tunneling core. For ICMPv6 endpoints, use namedP 0.2.0-alpha or a third-party client with explicit ICMPv6 support; the legacy commands below are IPv4 examples.
 
 
 ## Existing clients
@@ -54,7 +54,7 @@ The inspected GUI VPN path invokes tun2socks with a Wintun device and PowerShell
 
 ## Dedicated namedP client
 
-The dedicated Windows UI, engine and VPN guardian have moved to [NamedClients](https://github.com/namedkenzo/NamedClients). Its code and releases are separate from this server repository. namedP remains alpha and requires real-network Windows acceptance; the server's stable status does not promote the client to stable.
+The dedicated Windows UI, engine and VPN guardian have moved to [NamedClients](https://github.com/namedkenzo/NamedClients). Its code and releases are separate from this web-panel repository. namedP remains alpha and requires real-network Windows acceptance; the panel's stable status does not promote the client to stable.
 
 ## Inspected primary sources
 
