@@ -363,6 +363,7 @@ if d.get('tls_cert'):
  try:
   cert=ssl._ssl._test_decode_cert(d['tls_cert']);host=next(v for k,v in cert.get('subjectAltName',[]) if k=='DNS')
  except (OSError,ValueError,StopIteration,ssl.SSLError): pass
+if ':' in host and not host.startswith('['): host=f'[{host}]'
 print(f'  Panel: {scheme}://{host}:{port}')
 PY
  fi
