@@ -64,6 +64,8 @@ bash /tmp/namedicmp-install.sh
 
 ## وضعیت و عیب‌یابی
 
+نصب و آپدیت، تنظیمات قابل‌بازگشت شبکه را خودکار اعمال می‌کنند و هسته نرخ ارسال ICMP را کنترل می‌کند. [تنظیمات، بازگردانی و محدودیت‌های میزبان](docs/NETWORK-TUNING.md). این موارد تضمینی برای جلوگیری از مسدودسازی یا خاموش‌شدن از طرف ضد‌دیداس شرکت میزبان نیستند.
+
 ```bash
 systemctl status namedicmp --no-pager
 journalctl -u namedicmp -n 60 --no-pager

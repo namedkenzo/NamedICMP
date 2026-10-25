@@ -19,10 +19,12 @@ type Config struct {
 	MaxUDPPerUser int    `json:"max_udp_sessions_per_user"`
 	Window        int    `json:"max_window"`
 	AllowPrivate  bool   `json:"allow_private_targets"`
+	ICMPPacketsPerSecond int `json:"icmp_packets_per_second"`
+	ICMPBurstPackets int `json:"icmp_burst_packets"`
 }
 
 func DefaultConfig() Config {
-	return Config{PanelListen: "0.0.0.0:8443", ICMPListen: "0.0.0.0", StatePath: "/var/lib/namedicmp/state.json", MaxSessions: 256, MaxPerUser: 32, MaxUDPPerUser: 128, Window: 20000}
+	return Config{PanelListen: "0.0.0.0:8443", ICMPListen: "0.0.0.0", StatePath: "/var/lib/namedicmp/state.json", MaxSessions: 256, MaxPerUser: 32, MaxUDPPerUser: 128, Window: 20000, ICMPPacketsPerSecond: 2500, ICMPBurstPackets: 32}
 }
 func LoadConfig(path string) (Config, error) {
 	c := DefaultConfig()
@@ -41,6 +43,7 @@ func LoadConfig(path string) (Config, error) {
 	if c.MaxSessions < 1 || c.MaxSessions > 10000 || c.MaxPerUser < 1 || c.MaxUDPPerUser < 1 || c.MaxUDPPerUser > 10000 || c.Window < 8 || c.Window > 100000 || c.StatePath == "" || (c.TLSCert == "") != (c.TLSKey == "") {
 		return c, errors.New("invalid config")
 	}
+	if c.ICMPPacketsPerSecond < 0 || c.ICMPPacketsPerSecond > 100000 || c.ICMPBurstPackets < 1 || c.ICMPBurstPackets > 1024 {return c,errors.New("invalid ICMP pacing settings")}
 	return c, nil
 }
 func SaveConfig(path string, c Config) error {
@@ -50,3 +53,4 @@ func SaveConfig(path string, c Config) error {
 	}
 	return os.WriteFile(path, append(b, '\n'), 0600)
 }
+

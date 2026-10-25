@@ -9,6 +9,9 @@ trap 'rm -rf -- "$fixture"' EXIT
 PREFIX="$fixture/opt";STATE="$fixture/state";CONFIG="$fixture/config.json";workdir="$fixture/work"
 mkdir -p "$PREFIX" "$STATE" "$workdir" "$fixture/source"
 cp install.sh "$fixture/source/install.sh"
+mkdir -p "$fixture/source/scripts"
+cp scripts/network_tuning.py "$fixture/source/scripts/"
+network_tuning(){ :; }
 printf '{"users":{"test":{"key":123456,"upload":99}}}\n' >"$STATE/state.json"
 python3 - "$CONFIG" "$STATE/state.json" <<'PY'
 import json,sys
@@ -45,3 +48,4 @@ cmp "$CONFIG" "$fixture/config.expected";cmp "$STATE/state.json" "$fixture/state
 count=$(find "$STATE/backups" -name state.json | wc -l)
 [[ $count -eq 3 ]]
 say 'Update preservation, stopped-service handling, unique backups and failed-health rollback passed.'
+

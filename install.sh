@@ -8,7 +8,7 @@ PREFIX=/opt/namedicmp
 CONFIG=/etc/namedicmp/config.json
 STATE=/var/lib/namedicmp
 GO_VERSION=1.27.3
-MANAGER_VERSION=0.3.0
+MANAGER_VERSION=0.3.1
 INSTALL_MODE="${NAMEDICMP_INSTALL_MODE:-auto}"
 workdir=""
 trap '[[ -z "$workdir" ]] || rm -rf -- "$workdir"' EXIT
@@ -113,6 +113,11 @@ echo_suppression(){
  printf 'net.ipv4.icmp_echo_ignore_all = 1\n' >/etc/sysctl.d/90-namedicmp.conf
  sysctl -w net.ipv4.icmp_echo_ignore_all=1
 }
+network_tuning(){
+ require_installed
+ if [[ ! -f $PREFIX/network_tuning.py ]];then say 'Network helper is missing; update namedICMP first.';return 1;fi
+ python3 "$PREFIX/network_tuning.py" "${1:-apply}"
+}
 certificate(){
  local domain email panel_port;require_installed
  panel_port=$(python3 -c 'import json;print(json.load(open("/etc/namedicmp/config.json"))["panel_listen"].rsplit(":",1)[1])')
@@ -192,6 +197,7 @@ install_namedicmp(){
  id -u namedicmp >/dev/null 2>&1 || useradd --system --gid namedicmp --home-dir "$STATE" --shell /usr/sbin/nologin namedicmp
  install -d -m 0755 "$PREFIX";install -m 0755 "$workdir/namedicmp" "$PREFIX/namedicmp"
  install -m 0755 "$source_dir/install.sh" "$PREFIX/manager.sh"
+ install -m 0644 "$source_dir/scripts/network_tuning.py" "$PREFIX/network_tuning.py"
  cat >/usr/local/bin/namedicmp <<'WRAPPER'
 #!/usr/bin/env bash
 exec bash /opt/namedicmp/manager.sh "$@"
@@ -203,6 +209,7 @@ WRAPPER
  chown -R namedicmp:namedicmp "$STATE";chown root:namedicmp "$CONFIG";chmod 0640 "$CONFIG"
  remember_source
  install_service;echo_suppression
+ network_tuning apply || say 'Some network settings could not be applied; installation continues. Review the warning above.'
  systemctl enable namedicmp.service
  if [[ $use_ssl == y ]];then if ! certificate;then systemctl stop namedicmp.service || true;say 'SSL setup failed; the panel stays stopped. Correct DNS/port 80 and retry menu option 8.';return 1;fi
  else
@@ -310,6 +317,8 @@ PY
   fi
  fi
  install -m 0755 "$source_dir/install.sh" "$PREFIX/manager.sh"
+ install -m 0644 "$source_dir/scripts/network_tuning.py" "$PREFIX/network_tuning.py"
+ network_tuning apply || say 'Network tuning could not be completed; the updated service is kept running.'
  remember_source
  say "Updated to $("$PREFIX/namedicmp" version). Users, quotas, panel credentials, port and TLS settings preserved."
  say "Backup: $backup_dir"
@@ -319,6 +328,7 @@ change_credentials(){ require_installed;systemctl is-active --quiet namedicmp.se
 uninstall(){
  require_installed;if ! yesno 'Uninstall namedICMP (user data is kept by default)?';then return;fi
  systemctl disable --now namedicmp.service namedicmp-renew.timer || true
+ if [[ -f $PREFIX/network_tuning.py ]];then network_tuning restore || say 'Network tuning backup retained; restore it manually before removing retained data.';fi
  rm -f /etc/systemd/system/namedicmp.service /etc/systemd/system/namedicmp-renew.service /etc/systemd/system/namedicmp-renew.timer /etc/letsencrypt/renewal-hooks/deploy/namedicmp /usr/local/bin/namedicmp
  if [[ -f /etc/namedicmp/icmp-echo.previous ]];then local previous;previous=$(cat /etc/namedicmp/icmp-echo.previous);rm -f /etc/sysctl.d/90-namedicmp.conf;if [[ $previous =~ ^[01]$ && $(cat /proc/sys/net/ipv4/icmp_echo_ignore_all) == 1 ]];then sysctl -w "net.ipv4.icmp_echo_ignore_all=$previous";fi;fi
  rm -rf -- "$PREFIX";systemctl daemon-reload
@@ -356,7 +366,7 @@ PY
  printf '%b\n  WEB PANEL%b\n' "$dim" "$reset"
  printf '  8   SSL certificate · Certbot\n  9   Change panel port\n  10  Change username and password\n'
  printf '%b\n  MAINTENANCE%b\n' "$dim" "$reset"
- printf '  11  Uninstall\n  0   Exit\n\n'
+ printf '  11  Uninstall\n  12  Apply network tuning\n  13  Restore previous network tuning\n  0   Exit\n\n'
 }
 pause_menu(){ if [[ ${NAMEDICMP_INSTALLER_TEST:-0} != 1 ]];then local ignored;read -r -p 'Press Enter to return to the menu… ' ignored </dev/tty;fi; }
 run_menu_action(){
@@ -372,7 +382,7 @@ menu(){ require_root;while :;do
  menu_render
  local choice;ask choice 'Select option:' '0'
  case $choice in
- 1)run_menu_action install_namedicmp;;2)run_menu_action update_namedicmp;;3)run_menu_action start_namedicmp;;4)run_menu_action stop_namedicmp;;5)run_menu_action restart_namedicmp;;6)run_menu_action status_namedicmp;;7)run_menu_action logs_namedicmp;;8)run_menu_action certificate;;9)run_menu_action change_port;;10)run_menu_action change_credentials;;11)run_menu_action uninstall;;0)exit 0;;*)say 'Invalid option. Choose one of the listed numbers.';;esac
+ 1)run_menu_action install_namedicmp;;2)run_menu_action update_namedicmp;;3)run_menu_action start_namedicmp;;4)run_menu_action stop_namedicmp;;5)run_menu_action restart_namedicmp;;6)run_menu_action status_namedicmp;;7)run_menu_action logs_namedicmp;;8)run_menu_action certificate;;9)run_menu_action change_port;;10)run_menu_action change_credentials;;11)run_menu_action uninstall;;12)run_menu_action network_tuning apply;;13)run_menu_action network_tuning restore;;0)exit 0;;*)say 'Invalid option. Choose one of the listed numbers.';;esac
 done;}
 if [[ ${NAMEDICMP_INSTALLER_TEST:-0} != 1 ]];then menu;fi
 

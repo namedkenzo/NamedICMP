@@ -17,6 +17,7 @@ jobs:
       - run: go vet ./...
       - run: bash scripts/test_installer.sh
       - run: bash scripts/test_update.sh
+      - run: python3 scripts/test_network_tuning.py
       - run: node --check internal/panel/web/app.js
       - run: node scripts/test_versions.cjs
       - run: npm ci --ignore-scripts --no-audit --no-fund

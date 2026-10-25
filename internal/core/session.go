@@ -47,7 +47,7 @@ func (s *session) run() {
 	if s.peer.Message.TCP {
 		conn, err := outbound.DialTCP(ctx, o, s.peer.Message.Target, s.core.Config.AllowPrivate)
 		if err != nil {
-			s.core.dialErrors.Add(1)
+			s.core.recordDialError(err)
 			return
 		}
 		defer conn.Close()
@@ -55,7 +55,7 @@ func (s *session) run() {
 	} else {
 		conn, err := outbound.DialUDP(ctx, o, s.peer.Message.Target, s.core.Config.AllowPrivate)
 		if err != nil {
-			s.core.dialErrors.Add(1)
+			s.core.recordDialError(err)
 			return
 		}
 		defer conn.Close()
@@ -354,3 +354,4 @@ func writeTCP(c net.Conn, b []byte) error {
 	}
 	return nil
 }
+

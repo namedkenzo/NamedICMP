@@ -79,6 +79,8 @@ func (r *RawTransport) Write(p Packet, m wire.Message) error {
 		return err
 	}
 	b := wire.Echo(byte(p.Message.ReplyType), p.EchoID, p.EchoSeq, payload)
+	// This socket has one writer, so this deadline cannot affect another send.
+	if err:=r.c.SetWriteDeadline(time.Now().Add(200*time.Millisecond));err!=nil{return err}
 	_, err = r.c.WriteToIP(b, &net.IPAddr{IP: net.ParseIP(p.Source)})
 	return err
 }
@@ -99,6 +101,10 @@ type Core struct {
 	udpIn, udpOut, tcpIn, tcpOut, dialErrors, oversizedUDP atomic.Uint64
 	decode                                                 *zstd.Decoder
 	stopping                                               bool
+	controlOut, dataOut chan responsePacket
+	writeDone, stopWrite chan struct{}
+	writeQueueDrops, sessionQueueDrops, sessionLimitDrops, socketWriteErrors atomic.Uint64
+	outboundDNS, outboundPolicy, outboundTimeout, outboundNetwork, outboundOther atomic.Uint64
 	stopOnce                                               sync.Once
 	credentialsMu                                          sync.Mutex
 	pingMu                                                 sync.Mutex
@@ -114,11 +120,12 @@ func New(s *store.Store, c store.Config, t Transport) (*Core, error) {
 	if err != nil {
 		return nil, err
 	}
-	core := &Core{Store: s, Config: c, transport: t, sessions: map[sessionKey]*session{}, perUser: map[string]int{}, udpPerUser: map[string]int{}, tcpPerUser: map[string]int{}, decode: d, pingBuckets: map[string]*bucket{}}
+	core := &Core{Store: s, Config: c, transport: t, sessions: map[sessionKey]*session{}, perUser: map[string]int{}, udpPerUser: map[string]int{}, tcpPerUser: map[string]int{}, decode: d, pingBuckets: map[string]*bucket{}, controlOut:make(chan responsePacket,256),dataOut:make(chan responsePacket,2048),writeDone:make(chan struct{}),stopWrite:make(chan struct{})}
 	if err := core.RefreshCredentials(); err != nil {
 		d.Close()
 		return nil, err
 	}
+	go core.writeLoop()
 	return core, nil
 }
 func (c *Core) RefreshCredentials() error {
@@ -234,6 +241,7 @@ func (c *Core) Handle(ctx context.Context, p Packet) {
 		if c.stopping || len(c.sessions) >= c.Config.MaxSessions || userFull {
 			c.mu.Unlock()
 			c.dropped.Add(1)
+			c.sessionLimitDrops.Add(1)
 			if m.TCP {
 				c.kick(p)
 			}
@@ -279,10 +287,19 @@ func (c *Core) Handle(ctx context.Context, p Packet) {
 	case s.in <- p:
 	default:
 		c.dropped.Add(1)
+		c.sessionQueueDrops.Add(1)
 	}
 }
 func (c *Core) reply(p Packet, m wire.Message) {
 	m.TCP = p.Message.TCP
+	queue:=c.dataOut
+	if m.Kind!=0 {queue=c.controlOut} else if m.TCP {
+		if f,err:=wire.DecodeFrame(m.Payload);err==nil && (f.Kind!=0 || f.DataKind!=0) {queue=c.controlOut}
+	}
+	select {case <-c.stopWrite:return;default:}
+	select {case queue<-responsePacket{p,m}:default:c.dropped.Add(1);c.writeQueueDrops.Add(1)}
+}
+func (c *Core) write(p Packet,m wire.Message) {
 	if err := c.transport.Write(p, m); err == nil {
 		c.sent.Add(1)
 		if m.Kind == 0 {
@@ -294,6 +311,7 @@ func (c *Core) reply(p Packet, m wire.Message) {
 		}
 	} else {
 		c.dropped.Add(1)
+		c.socketWriteErrors.Add(1)
 	}
 }
 func (c *Core) kick(p Packet) {
@@ -321,7 +339,7 @@ func (c *Core) Metrics() map[string]any {
 	c.mu.Lock()
 	n := len(c.sessions)
 	c.mu.Unlock()
-	return map[string]any{"sessions": n, "tcp_packets_in": c.tcpIn.Load(), "tcp_packets_out": c.tcpOut.Load(), "udp_packets_in": c.udpIn.Load(), "udp_packets_out": c.udpOut.Load(), "outbound_errors": c.dialErrors.Load(), "oversized_udp": c.oversizedUDP.Load(), "packets_in": c.received.Load(), "packets_out": c.sent.Load(), "dropped": c.dropped.Load(), "rejected": c.invalid.Load(), "state_healthy": c.Store.Fault() == nil}
+	return map[string]any{"sessions": n, "tcp_packets_in": c.tcpIn.Load(), "tcp_packets_out": c.tcpOut.Load(), "udp_packets_in": c.udpIn.Load(), "udp_packets_out": c.udpOut.Load(), "outbound_errors": c.dialErrors.Load(), "outbound_dns_errors":c.outboundDNS.Load(),"outbound_policy_errors":c.outboundPolicy.Load(),"outbound_timeouts":c.outboundTimeout.Load(),"outbound_network_errors":c.outboundNetwork.Load(),"outbound_other_errors":c.outboundOther.Load(),"write_queue_dropped":c.writeQueueDrops.Load(),"session_queue_dropped":c.sessionQueueDrops.Load(),"session_limit_rejected":c.sessionLimitDrops.Load(),"socket_write_errors":c.socketWriteErrors.Load(),"icmp_packets_per_second":c.Config.ICMPPacketsPerSecond,"icmp_burst_packets":c.Config.ICMPBurstPackets, "oversized_udp": c.oversizedUDP.Load(), "packets_in": c.received.Load(), "packets_out": c.sent.Load(), "dropped": c.dropped.Load(), "rejected": c.invalid.Load(), "state_healthy": c.Store.Fault() == nil}
 }
 func (c *Core) Stop() {
 	c.stopOnce.Do(func() {
@@ -331,7 +349,9 @@ func (c *Core) Stop() {
 			s.cancel()
 		}
 		c.mu.Unlock()
+		close(c.stopWrite)
 		c.transport.Close()
+		<-c.writeDone
 		c.wg.Wait()
 		c.decode.Close()
 	})
@@ -366,3 +386,4 @@ func (c *Core) Maintain(ctx context.Context) {
 		}
 	}
 }
+

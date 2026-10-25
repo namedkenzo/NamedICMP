@@ -64,6 +64,8 @@ Changing credential mode reconnects that user's sessions. Numeric keys do not en
 
 ## Operations & troubleshooting
 
+Install/Update now apply reversible network tuning and the core paces outgoing ICMP bursts. [Settings, restore and provider limitations](docs/NETWORK-TUNING.md). These cannot guarantee protection from upstream/provider anti-DDoS shutdowns.
+
 ```bash
 systemctl status namedicmp --no-pager
 journalctl -u namedicmp -n 60 --no-pager

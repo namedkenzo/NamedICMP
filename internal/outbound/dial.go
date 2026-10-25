@@ -8,6 +8,7 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"net/netip"
@@ -18,6 +19,10 @@ import (
 
 	"namedicmp/internal/store"
 )
+
+var ErrResolve = errors.New("target DNS lookup failed")
+var ErrPolicy = errors.New("target denied by outbound policy")
+var ErrUDPUnsupported = errors.New("HTTP CONNECT cannot carry UDP")
 
 func SplitTarget(target string) (string, int, error) {
 	h, p, err := net.SplitHostPort(target)
@@ -56,11 +61,12 @@ func Resolve(ctx context.Context, target string, allowPrivate bool) (string, []n
 	}
 	ips, err := net.DefaultResolver.LookupIP(ctx, "ip", h)
 	if err != nil || len(ips) == 0 {
-		return "", nil, errors.New("cannot resolve target")
+		if err==nil {err=errors.New("no target addresses")}
+		return "", nil, fmt.Errorf("%w: %w",ErrResolve,err)
 	}
 	for _, ip := range ips {
 		if !allowPrivate && !safeIP(ip) {
-			return "", nil, errors.New("private or special target denied")
+			return "", nil, ErrPolicy
 		}
 	}
 	// Prefer IPv4 for UDP destinations on the IPv4-only VPS installations this
@@ -305,7 +311,7 @@ func DialUDP(ctx context.Context, o store.Outbound, target string, allowPrivate 
 	}
 	_, port, _ := SplitTarget(target)
 	if o.Kind == "http" {
-		return nil, errors.New("HTTP CONNECT does not support UDP; select SOCKS5")
+		return nil, ErrUDPUnsupported
 	}
 	if o.Kind == "direct" {
 		addr, err := net.ResolveUDPAddr("udp", numeric)
@@ -422,3 +428,4 @@ func (u *UDP) WatchControl(done func()) {
 	}
 	go func() { var b [1]byte; _, _ = u.control.Read(b[:]); done() }()
 }
+
