@@ -86,3 +86,5 @@ dialog{overflow:hidden}
 @keyframes button-sheen{to{transform:translateX(110%) skewX(-15deg)}}
 @media(hover:hover) and (prefers-reduced-motion:no-preference){.primary:hover::after{animation:button-sheen .65s var(--ease)}}
 @media(max-width:700px){#editor-form{max-height:calc(90svh - 44px)}}
+.settings-tabs{display:flex;gap:10px;margin-bottom:20px}.settings-tabs [aria-selected="true"]{border-color:var(--accent);color:var(--accent)}.settings-card{padding:24px;max-width:860px}.settings-card form{display:grid;gap:16px}.host-addresses{display:flex;flex-wrap:wrap;gap:12px;margin:18px 0}.host-addresses button{overflow-wrap:anywhere;text-align:start}.address-card{padding:24px;margin-bottom:20px}
+

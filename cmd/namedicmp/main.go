@@ -24,7 +24,7 @@ import (
 	"namedicmp/internal/store"
 )
 
-const version = "0.3.1"
+const version = "0.4.0"
 
 type credentials struct {
 	Username string `json:"username"`
@@ -70,6 +70,8 @@ func initialize(args []string) error {
 	listen := f.String("listen", "0.0.0.0:8443", "panel bind address")
 	state := f.String("state", "/var/lib/namedicmp/state.json", "state path")
 	host := f.String("public-host", "", "public IP or domain for exports")
+	family:=f.String("family","ipv4","export endpoint family: ipv4 or ipv6")
+	reader:=f.String("packet-reader","raw_ip","raw_ip or raw_packet")
 	if err := f.Parse(args); err != nil {
 		return err
 	}
@@ -84,17 +86,20 @@ func initialize(args []string) error {
 	if err != nil {
 		return err
 	}
+	connection,err:=store.ValidateConnection(store.ConnectionSettings{Family:*family,Host:*host,ReaderMode:*reader});if err!=nil{s.Close();return err}
 	defer s.Close()
 	if err = s.SetAdmin(v.Username, v.Password); err != nil {
 		return err
 	}
+	if err=s.SetConnection(connection);err!=nil{return err}
 	if err = os.MkdirAll(filepath.Dir(*path), 0700); err != nil {
 		return err
 	}
 	c := store.DefaultConfig()
 	c.PanelListen = *listen
 	c.StatePath = *state
-	c.PublicHost = *host
+	c.PublicHost = connection.Host
+	c.EndpointFamily=connection.Family
 	if err = store.SaveConfig(*path, c); err != nil {
 		return err
 	}
@@ -152,7 +157,9 @@ func serve(args []string) error {
 	defer cancel()
 	var c *core.Core
 	if !*panelOnly {
-		raw, err := core.ListenRaw(conf.ICMPListen)
+		reader:="raw_ip";if settings,ok:=s.Connection();ok&&settings.ReaderMode!=""{reader=settings.ReaderMode}
+		raw, warnings,err := core.ListenDual(conf.ICMPListen,conf.ICMPListen6,reader)
+		for _,warning:=range warnings{log.Print(warning)}
 		if err != nil {
 			return err
 		}

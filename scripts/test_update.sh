@@ -12,6 +12,7 @@ cp install.sh "$fixture/source/install.sh"
 mkdir -p "$fixture/source/scripts"
 cp scripts/network_tuning.py "$fixture/source/scripts/"
 network_tuning(){ :; }
+install_service(){ :; }
 printf '{"users":{"test":{"key":123456,"upload":99}}}\n' >"$STATE/state.json"
 python3 - "$CONFIG" "$STATE/state.json" <<'PY'
 import json,sys

@@ -8,7 +8,7 @@ PREFIX=/opt/namedicmp
 CONFIG=/etc/namedicmp/config.json
 STATE=/var/lib/namedicmp
 GO_VERSION=1.27.3
-MANAGER_VERSION=0.3.1
+MANAGER_VERSION=0.4.0
 INSTALL_MODE="${NAMEDICMP_INSTALL_MODE:-auto}"
 workdir=""
 trap '[[ -z "$workdir" ]] || rm -rf -- "$workdir"' EXIT
@@ -96,7 +96,7 @@ ProtectHome=true
 PrivateTmp=true
 ProtectKernelTunables=true
 ProtectControlGroups=true
-RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_PACKET
 ReadWritePaths=/var/lib/namedicmp /run/namedicmp
 UMask=0077
 LimitNOFILE=65536
@@ -177,14 +177,20 @@ install_namedicmp(){
   restoring=y;say 'Reinstalling with retained configuration and users.'
  fi
  packages
- local source_dir panel_port public_host bind_address use_ssl=n
+ local source_dir panel_port public_host bind_address use_ssl=n endpoint_family=ipv4 packet_reader=raw_ip detected="" choice
+ source_tree source_dir
  if [[ $restoring == n ]];then
  get_port panel_port
  if [[ -n $(ss -H -ltn "sport = :$panel_port") ]];then say "TCP port $panel_port is already occupied. Choose a free panel port.";return 1;fi
- ask public_host 'Public server IPv4 or domain for client configs:'
- [[ -n $public_host && $public_host != *[[:space:]]* && $public_host != */* ]] || { say 'A public IP or domain is required.';return 1; }
+ while :;do ask choice 'Connection address family: 1) IPv4  2) IPv6' '1';case $choice in 1|4|ipv4)endpoint_family=ipv4;break;;2|6|ipv6)endpoint_family=ipv6;break;;*)say 'Choose IPv4 or IPv6.';;esac;done
+ detected=$(python3 "$source_dir/scripts/detect_addresses.py" "$endpoint_family")
+ say "Detected $endpoint_family: ${detected:-not detected; use an explicit IP/domain or configure detection later}"
+ ask public_host 'Connection IP or domain (blank uses automatic detection):' "$detected"
+ say 'RAW IP is the default. AF_PACKET is advanced local capture, not an upstream blocking bypass. NEW is a firewall state.'
+ while :;do ask choice 'Packet reader: 1) Raw IP socket  2) Raw packet capture (Linux)' '1';case $choice in 1)packet_reader=raw_ip;break;;2)packet_reader=raw_packet;break;;*)say 'Choose 1 or 2.';;esac;done
  if yesno 'Obtain SSL for the web panel with Certbot?';then use_ssl=y;[[ $panel_port != 80 ]] || { say 'Choose a panel port other than 80 for SSL.';return 1; };fi
  bind_address=0.0.0.0
+ if [[ $endpoint_family == ipv6 ]];then bind_address='[::]';fi
  if [[ $use_ssl == n ]] && yesno 'Access HTTP only through localhost + SSH tunnel?';then bind_address=127.0.0.1;fi
  credentials
  else
@@ -192,7 +198,7 @@ install_namedicmp(){
   bind_address=$(python3 -c 'import json;print(json.load(open("/etc/namedicmp/config.json"))["panel_listen"].rsplit(":",1)[0])')
   public_host=$(python3 -c 'import json;print(json.load(open("/etc/namedicmp/config.json"))["public_host"])')
  fi
- source_tree source_dir;build_candidate "$source_dir"
+ build_candidate "$source_dir"
  getent group namedicmp >/dev/null || groupadd --system namedicmp
  id -u namedicmp >/dev/null 2>&1 || useradd --system --gid namedicmp --home-dir "$STATE" --shell /usr/sbin/nologin namedicmp
  install -d -m 0755 "$PREFIX";install -m 0755 "$workdir/namedicmp" "$PREFIX/namedicmp"
@@ -205,7 +211,7 @@ WRAPPER
  chmod 0755 /usr/local/bin/namedicmp
  install -d -m 0750 -o root -g namedicmp /etc/namedicmp
  install -d -m 0700 -o namedicmp -g namedicmp "$STATE"
- if [[ $restoring == n ]];then credentials_json | "$PREFIX/namedicmp" init --config "$CONFIG" --state "$STATE/state.json" --listen "$bind_address:$panel_port" --public-host "$public_host";unset admin_password;fi
+ if [[ $restoring == n ]];then credentials_json | "$PREFIX/namedicmp" init --config "$CONFIG" --state "$STATE/state.json" --listen "$bind_address:$panel_port" --public-host "$public_host" --family "$endpoint_family" --packet-reader "$packet_reader";unset admin_password;fi
  chown -R namedicmp:namedicmp "$STATE";chown root:namedicmp "$CONFIG";chmod 0640 "$CONFIG"
  remember_source
  install_service;echo_suppression
@@ -217,9 +223,9 @@ WRAPPER
   wait_healthy || { say 'Service failed its health check; inspect Recent logs.';return 1; }
   if [[ $restoring == y ]];then say 'Retained configuration restored; check Status for the configured HTTP/HTTPS address.'
   elif [[ $bind_address == 127.0.0.1 ]];then say "SSH tunnel: ssh -N -L $panel_port:127.0.0.1:$panel_port root@$public_host";say "Open http://127.0.0.1:$panel_port"
-  else say "Panel: http://$public_host:$panel_port";fi
+  else local url_host=${public_host:-SERVER_IP};[[ $url_host != *:* || $url_host == \[*\] ]] || url_host="[$url_host]";say "Panel: http://$url_host:$panel_port";fi
  fi
- say 'Allow the selected TCP panel port and IPv4 ICMP in your server/cloud firewall. Run namedicmp to reopen this menu.'
+ say 'Allow the panel TCP port and ICMPv4/ICMPv6 in host/provider firewalls. Do not block ICMPv6 neighbor discovery or Packet Too Big. Run namedicmp to reopen this menu.'
 }
 remember_source(){
   python3 - "$REPOSITORY" "$REFERENCE" <<'PY'
@@ -303,6 +309,7 @@ PY
   say 'Unable to replace executable; previous version retained.';return 1
  fi
  if [[ $was_running == y ]];then
+  install_service
   local healthy=n
   if systemctl start namedicmp.service;then
    if wait_healthy;then healthy=y;fi

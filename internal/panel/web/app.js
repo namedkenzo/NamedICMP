@@ -12,7 +12,10 @@ const systemTheme=matchMedia('(prefers-color-scheme: dark)');
 let theme=localStorage.getItem('namedicmp-theme')||(systemTheme.matches?'dark':'light');
 systemTheme.addEventListener('change',event=>{if(!localStorage.getItem('namedicmp-theme')){theme=event.matches?'dark':'light';preferences();}});
 if(!['dark','light'].includes(theme))theme='dark';
-let csrf='',page='home',users=[],outbounds=[],home=null,session=null,editorAction=null,pollTimer=null,busy=false;
+let csrf='',page='home',users=[],outbounds=[],home=null,session=null,editorAction=null,pollTimer=null,busy=false,connectionDirty=false;
+const revealedAddresses=new Set();
+Object.assign(dictionary.en,{settings:'Settings',settingsHint:'Connection address, packet reader and outbounds.',connectionTab:'IPv4 / IPv6',ipFamily:'Connection IP family',endpointHost:'IP address or domain (blank = automatic)',useAutomatic:'Use detected address automatically',familyHint:'IPv6 domains need an AAAA record. Automatic detection does not prove external reachability; check routing and the provider firewall.',packetReader:'Packet reader',rawIP:'Raw IP socket (default)',rawPacket:'Raw packet capture (advanced, Linux)',readerHint:'NEW is a firewall state, not a socket mode. Packet capture only sees traffic delivered to this VPS, not traffic blocked upstream. Reader changes need a service restart.',hostAddresses:'Host addresses',addressPrivacy:'Addresses are hidden. Tap to show or hide them.',notDetected:'No public address detected',detected:'Detected',showAddress:'Show address',hideAddress:'Hide address',restartReader:'Reader change saved. Restart namedicmp from SSH to apply it.',activeReader:'Active reader',ipv6ClientHint:'Use namedP with ICMPv6 support. IPv6 compatibility of other clients must be verified.'});
+Object.assign(dictionary.fa,{settings:'تنظیمات',settingsHint:'آدرس اتصال، روش خواندن بسته و خروجی‌ها.',connectionTab:'IPv4 / IPv6',ipFamily:'خانوادهٔ IP اتصال',endpointHost:'آی‌پی یا دامنه (خالی = تشخیص خودکار)',useAutomatic:'استفادهٔ خودکار از آدرس تشخیص‌داده‌شده',familyHint:'دامنهٔ IPv6 به رکورد AAAA نیاز دارد. تشخیص آدرس، دسترسی از بیرون را تضمین نمی‌کند؛ مسیر شبکه و فایروال میزبان را بررسی کنید.',packetReader:'روش خواندن بسته',rawIP:'Raw IP socket (پیش‌فرض)',rawPacket:'Raw packet capture (پیشرفته، لینوکس)',readerHint:'NEW وضعیت اتصال در فایروال است، نه روش خواندن بسته. دریافت مستقیم فقط بستهٔ رسیده به این VPS را می‌بیند، نه بستهٔ مسدودشده در بالادست. تغییر این گزینه به ری‌استارت سرویس نیاز دارد.',hostAddresses:'آدرس‌های میزبان',addressPrivacy:'آدرس‌ها مخفی هستند؛ با لمس نمایش دهید یا دوباره مخفی کنید.',notDetected:'آدرس عمومی تشخیص داده نشد',detected:'تشخیص‌داده‌شده',showAddress:'نمایش آدرس',hideAddress:'مخفی‌کردن آدرس',restartReader:'روش جدید ذخیره شد؛ برای اعمال، namedicmp را از SSH ری‌استارت کنید.',activeReader:'روش فعال',ipv6ClientHint:'از namedP دارای پشتیبانی ICMPv6 استفاده کنید؛ سازگاری IPv6 کلاینت‌های دیگر باید جدا بررسی شود.'});
 const history=[];
 const $=id=>document.getElementById(id),t=key=>dictionary[lang][key]||key;
 function el(tag,cls,text){const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;}
@@ -56,20 +59,20 @@ function preferences(){
  document.querySelectorAll('.language-toggle').forEach(n=>{const label=lang==='fa'?'English':'فارسی';n.replaceChildren(icon('globe'),el('span','',label));n.setAttribute('aria-label',label);});
  $('logout').replaceChildren(icon('logout'),el('span','',t('logout')));$('hamburger').setAttribute('aria-label',t('openNavigation'));$('close-editor').setAttribute('aria-label',t('closeDialog'));$('search-users').setAttribute('aria-label',t('searchUsers'));document.querySelector('#sidebar nav').setAttribute('aria-label',t('navigation'));
  document.querySelectorAll('[data-page]').forEach(n=>{if(n.dataset.page===page)n.setAttribute('aria-current','page');else n.removeAttribute('aria-current');});
- $('connection-note').textContent=t(location.protocol==='https:'?'secure':'plain');$('breadcrumb').textContent=t(page);if(home)renderHome();renderUsers();renderOutbounds();
+ $('connection-note').textContent=t(location.protocol==='https:'?'secure':'plain');$('breadcrumb').textContent=t(page);if(home)renderHome();renderUsers();renderOutbounds();renderConnectionSettings();
 }
 document.addEventListener('visibilitychange',()=>document.body.classList.toggle('motion-paused',document.hidden));
 document.querySelectorAll('.theme-toggle').forEach(n=>n.onclick=()=>{theme=theme==='dark'?'light':'dark';localStorage.setItem('namedicmp-theme',theme);preferences();});
 document.querySelectorAll('.language-toggle').forEach(n=>n.onclick=()=>{lang=lang==='fa'?'en':'fa';localStorage.setItem('namedicmp-language',lang);preferences();});
 let toastTimer;function toast(msg){$('toast').textContent=msg;$('toast').hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').hidden=true,4500);}
 async function api(path,method='GET',data){const options={method,credentials:'same-origin',headers:{}};if(data!==undefined){options.headers['Content-Type']='application/json';options.body=JSON.stringify(data);}if(method!=='GET'&&csrf)options.headers['X-CSRF-Token']=csrf;let response;try{response=await fetch('/api/'+path,options);}catch{throw new Error(t('networkError'));}let payload;try{payload=await response.json();}catch{throw new Error(t('networkError'));}if(!response.ok){if(response.status===401&&path!=='login'){showLogin();}throw new Error(response.status===429?t('tooMany'):response.status===401?t('credentialsError'):(payload.error||t('networkError')));}return payload;}
-function showLogin(){clearTimeout(pollTimer);csrf='';session=null;$('app').hidden=true;$('login').hidden=false;$('password').value='';$('editor').close();document.body.classList.remove('drawer-open');}
+function showLogin(){clearTimeout(pollTimer);csrf='';session=null;home=null;revealedAddresses.clear();connectionDirty=false;$('host-addresses').replaceChildren();$('app').hidden=true;$('login').hidden=false;$('password').value='';$('editor').close();document.body.classList.remove('drawer-open');}
 async function enter(){session=await api('session');csrf=session.csrf;$('login').hidden=true;$('app').hidden=false;await refresh();schedule();}
 $('login-form').onsubmit=async event=>{event.preventDefault();$('login-error').textContent='';$('sign-in').disabled=true;try{const answer=await api('login','POST',{username:$('username').value,password:$('password').value});csrf=answer.csrf;$('password').value='';await enter();}catch(err){$('login-error').textContent=err.message;}finally{$('sign-in').disabled=false;}};
 $('logout').onclick=async()=>{try{await api('logout','POST',{});showLogin();}catch(err){toast(err.message);}};
 function schedule(){clearTimeout(pollTimer);if(session)pollTimer=setTimeout(async()=>{if(!document.hidden)await refresh();schedule();},5000);}
 async function refresh(){if(busy)return;busy=true;try{const result=await Promise.all([api('home'),api('users'),api('outbounds')]);[home,users,outbounds]=result;history.push(home.rx_per_second+home.tx_per_second);if(history.length>40)history.shift();$('nav-count').textContent=users.length;renderHome();renderUsers();renderOutbounds();$('last-updated').textContent=t('updated')+' '+new Date().toLocaleTimeString(lang==='fa'?'fa-IR':'en-GB');}catch(err){toast(err.message);}finally{busy=false;}}
-function selectPage(value){page=value;for(const key of ['home','users','outbounds'])$('page-'+key).hidden=key!==value;document.querySelectorAll('[data-page]').forEach(n=>{const active=n.dataset.page===value;n.classList.toggle('active',active);if(active)n.setAttribute('aria-current','page');else n.removeAttribute('aria-current');});$('breadcrumb').textContent=t(value);document.body.classList.remove('drawer-open');$('drawer-overlay').hidden=true;$('hamburger').setAttribute('aria-expanded','false');}
+function selectPage(value){page=value;for(const key of ['home','users','settings'])$('page-'+key).hidden=key!==value;document.querySelectorAll('[data-page]').forEach(n=>{const active=n.dataset.page===value;n.classList.toggle('active',active);if(active)n.setAttribute('aria-current','page');else n.removeAttribute('aria-current');});$('breadcrumb').textContent=t(value);document.body.classList.remove('drawer-open');$('drawer-overlay').hidden=true;$('hamburger').setAttribute('aria-expanded','false');}
 document.querySelectorAll('[data-page]').forEach(n=>n.onclick=()=>selectPage(n.dataset.page));
 $('hamburger').onclick=()=>{if(matchMedia('(max-width:900px)').matches){const open=document.body.classList.toggle('drawer-open');$('drawer-overlay').hidden=!open;$('hamburger').setAttribute('aria-expanded',String(open));}else{const collapsed=document.body.classList.toggle('sidebar-collapsed');$('hamburger').setAttribute('aria-expanded',String(!collapsed));}};
 $('drawer-overlay').onclick=()=>{document.body.classList.remove('drawer-open');$('drawer-overlay').hidden=true;};
@@ -79,6 +82,7 @@ function date(value){return value?new Date(value*1000).toLocaleDateString(lang==
 function progress(value){const bar=el('div','bar'),fill=el('span');fill.style.setProperty('--progress',Math.max(0,Math.min(100,value||0))+'%');bar.append(fill);return bar;}
 function metric(label,value,detail,pct){const card=el('article','card metric'),top=el('div','metric-label');top.append(el('span','',t(label)),symbol('metric-icon',{cpu:'cpu',ram:'memory',storage:'disk',sessions:'route'}[label]));card.append(top,el('div','metric-value',value));card.append(progress(pct),el('div','metric-detail',detail));return card;}
 function renderHome(){if(!home)return;const h=home,k=h.core||{},cpu=Number(h.cpu_percent||0),ram=Number(h.ram_percent||0),disk=h.disk_total?100*(1-h.disk_free/h.disk_total):0;$('metrics').replaceChildren(metric('cpu',formatNumber(cpu)+'%',formatNumber(h.cpu_cores)+' '+t('cores'),cpu),metric('ram',formatNumber(ram)+'%',bytes(h.ram_used)+' / '+bytes(h.ram_total),ram),metric('storage',formatNumber(disk)+'%',bytes(h.disk_free)+' '+t('available'),disk),metric('sessions',formatNumber(k.sessions),formatNumber(users.length)+' '+t('independentKeys'),Math.min(100,k.sessions||0)));
+ renderHostAddresses();renderConnectionSettings();
  const system=$('system-info');system.replaceChildren();for(const [key,val]of [['hostname',h.hostname],['os',h.os],['kernel',h.kernel],['architecture',h.architecture],['uptime',formatNumber(Math.floor(h.uptime_seconds/86400))+' '+t('days')],['processMemory',bytes(h.process_memory)]]){const row=el('div');row.append(el('dt','',t(key)),el('dd','',val));system.append(row);}
  const rates=$('network-rates');rates.replaceChildren();for(const [key,val]of [['download',h.rx_per_second],['upload',h.tx_per_second]]){const n=el('div'),label=el('div','rate-label');label.append(icon(key==='download'?'down':'up'),el('span','',t(key)));n.append(label,el('div','rate-value',bytes(val)+'/s'));rates.append(n);}
  const maxRate=Math.max(1,...history),chart=svgNode('svg',{viewBox:'0 0 400 110',preserveAspectRatio:'none','aria-hidden':'true'}),defs=svgNode('defs'),gradient=svgNode('linearGradient',{id:'traffic-fill',x1:0,y1:0,x2:0,y2:1});gradient.append(svgNode('stop',{offset:'0%','stop-color':'var(--accent)','stop-opacity':.24}),svgNode('stop',{offset:'100%','stop-color':'var(--accent)','stop-opacity':0}));defs.append(gradient);chart.append(defs);
@@ -116,10 +120,38 @@ function userEditor(u){
 function outboundEditor(o){openEditor(t(o?'editOutbound':'addOutbound'));const name=field('name','text',o?.name||'');name.input.required=true;name.input.maxLength=100;const kindLabel=el('label');kindLabel.append(el('span','',t('type')));const kind=el('select');for(const k of ['socks5','http']){const option=el('option','',k==='socks5'?'SOCKS5':'HTTP CONNECT');option.value=k;kind.append(option);}kind.value=o?.kind||'socks5';kindLabel.append(kind);const host=field('host','text',o?.host||'');host.input.required=true;const port=field('port','number',o?.port||1080);port.input.min=1;port.input.max=65535;port.input.required=true;const user=field('optionalUser','text',o?.username||''),password=field('optionalPassword','password','',o?'keepPassword':undefined);user.input.maxLength=password.input.maxLength=255;password.input.autocomplete='new-password';$('editor-fields').append(name.label,kindLabel,host.label,port.label,user.label,password.label);editorAction=()=>api('outbounds',o?'PUT':'POST',{id:o?.id||'',name:name.input.value,kind:kind.value,host:host.input.value.trim(),port:Number(port.input.value),username:user.input.value,password:password.input.value});}
 $('add-user').onclick=()=>userEditor();$('empty-add-user').onclick=()=>userEditor();$('add-outbound').onclick=()=>outboundEditor();
 function shellQuote(text){return "'"+text.replaceAll("'","'\\''")+"'";}
+function renderHostAddresses(){
+ const addresses=home?.connection?.addresses||{};const container=$('host-addresses');container.replaceChildren();
+ for(const family of ['ipv4','ipv6']){
+  const list=addresses[family]||[],key=family+':'+list.join(','),revealed=revealedAddresses.has(key);
+  const control=button(family.toUpperCase()+' · '+(list.length?(revealed?list.join(' , '):'••••••••'):t('notDetected')),()=>{if(revealed)revealedAddresses.delete(key);else revealedAddresses.add(key);renderHostAddresses();});
+  control.id='home-'+family;control.dir='ltr';control.disabled=!list.length;control.setAttribute('aria-pressed',String(revealed));control.setAttribute('aria-label',family.toUpperCase()+' · '+t(revealed?'hideAddress':'showAddress'));container.append(control);
+ }
+}
+function renderConnectionSettings(){
+ const value=home?.connection||session?.connection;if(!value)return;
+ if(!connectionDirty){$('endpoint-family').value=value.family||'ipv4';$('endpoint-host').value=value.host||'';$('packet-reader').value=value.reader_mode||'raw_ip';}
+ const family=$('endpoint-family').value,addresses=value.addresses?.[family]||[];
+ $('endpoint-host').placeholder=addresses[0]||t('notDetected');$('endpoint-detection').textContent=t('detected')+': '+(addresses.join(' , ')||t('notDetected'));
+ $('reader-status').textContent=value.restart_required?t('restartReader'):t('activeReader')+': '+(value.active_reader_mode||'off');
+}
+document.querySelectorAll('[data-settings-tab]').forEach(control=>control.onclick=()=>{
+ const connection=control.dataset.settingsTab==='connection';$('settings-connection').hidden=!connection;$('page-outbounds').hidden=connection;
+ document.querySelectorAll('[data-settings-tab]').forEach(tab=>tab.setAttribute('aria-selected',String(tab===control)));
+});
+for(const id of ['endpoint-family','endpoint-host','packet-reader'])$(id).addEventListener('input',()=>{connectionDirty=true;renderConnectionSettings();});
+$('endpoint-auto').onclick=()=>{connectionDirty=true;$('endpoint-host').value='';renderConnectionSettings();};
+$('connection-settings-form').onsubmit=async event=>{
+ event.preventDefault();$('settings-error').textContent='';$('save-connection-settings').disabled=true;
+ try{
+  const value=await api('settings/connection','PUT',{family:$('endpoint-family').value,host:$('endpoint-host').value.trim(),reader_mode:$('packet-reader').value});
+  connectionDirty=false;session.connection=value;session.public_host=value.effective_host;if(home)home.connection=value;renderConnectionSettings();toast(t(value.restart_required?'restartReader':'saved'));
+ }catch(error){$('settings-error').textContent=error.message;}finally{$('save-connection-settings').disabled=false;}
+};
 async function copy(text){try{if(navigator.clipboard&&window.isSecureContext){await navigator.clipboard.writeText(text);}else{const node=el('textarea');node.value=text;node.style.position='fixed';node.style.opacity='0';$('editor').append(node);node.select();if(!document.execCommand('copy'))throw new Error();node.remove();}toast(t('copied'));}catch{toast(t('networkError'));}}
 function profile(u){
  openEditor(t('connection'));$('save-editor').hidden=true;
- const host=session?.public_host||'',mode=u.encryption||'none';
+ const connection=home?.connection||session?.connection||{},host=connection.effective_host||session?.public_host||'',mode=u.encryption||'none';
  const modeLabel={none:t('noneEncryption'),aes128:'AES-128-GCM',aes256:'AES-256-GCM',chacha20:'ChaCha20-Poly1305'}[mode];
  let details=t('server')+': '+(host||t('requiredHost'))+(mode==='none'?'\n'+t('key')+': '+u.key:'')+'\n'+t('expiry')+': '+date(u.expires)+'\n'+t('usage')+': '+bytes(u.used)+(u.quota?' / '+bytes(u.quota):' / '+t('unlimited'))+'\n'+t('encryption')+': '+modeLabel;
  if(mode!=='none')details+='\n'+t('encryptionKey')+': '+u.encryption_key;
@@ -127,11 +159,13 @@ function profile(u){
  if(u.recovery)$('editor-fields').append(el('p','field-help',t('recovery')+': '+bytes(u.recovery)));
  if(host){
   const params={lport:'1080',mode:'vpn'};
+  if(connection.family==='ipv6')params.family='ipv6';
   if(mode==='none')params.key=String(u.key);
   else {params.encrypt=mode;params.encrypt_key=u.encryption_key;}
-  const uri='pingtunnel://'+host+'?'+new URLSearchParams(params).toString();
+  const uri='pingtunnel://'+(host.includes(':')?'['+host+']':host)+'?'+new URLSearchParams(params).toString();
   const linkBox=el('div','profile-box code',uri);linkBox.id='connection-uri';const linkButton=button(t('copyLink'),()=>copy(uri));linkButton.id='copy-connection-uri';
   $('editor-fields').append(linkBox,linkButton);
+  if(connection.family==='ipv6'){$('editor-fields').append(el('p','field-help',t('ipv6ClientHint')));return;}
   let command='pingtunnel -type client -l 127.0.0.1:1080 -s '+shellQuote(host)+' -sock5 1 -tcp_gz 0';
   if(mode==='none')command+=' -key '+u.key;
   if(mode!=='none')command+=' -encrypt '+mode+' -encrypt-key '+shellQuote(u.encryption_key);

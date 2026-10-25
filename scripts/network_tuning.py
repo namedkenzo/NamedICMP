@@ -8,6 +8,7 @@ import subprocess
 import tempfile
 
 MINIMUMS = {
+    "net.ipv6.icmp.echo_ignore_all": 1,
     "net.core.rmem_max": 4 * 1024 * 1024,
     "net.core.wmem_max": 4 * 1024 * 1024,
     "net.core.netdev_max_backlog": 4096,

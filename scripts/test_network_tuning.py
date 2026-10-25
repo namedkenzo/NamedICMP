@@ -16,6 +16,7 @@ class NetworkTuningTest(unittest.TestCase):
         self.config = Path(self.fixture.name) / "config"
         self.sysctls = Path(self.fixture.name) / "sysctl.d"
         self.values = {key: 100 for key in network.MINIMUMS}
+        self.values["net.ipv6.icmp.echo_ignore_all"] = 0
         self.initial = dict(self.values)
         self.writes = []
 
@@ -40,6 +41,7 @@ class NetworkTuningTest(unittest.TestCase):
 
     def test_never_lowers_existing_values_or_disables_security(self):
         self.values = {key: minimum * 2 for key, minimum in network.MINIMUMS.items()}
+        self.values["net.ipv6.icmp.echo_ignore_all"] = 1
         self.values["net.ipv4.icmp_msgs_per_sec"] = 0
         expected = dict(self.values)
         self.run_tuning("apply")

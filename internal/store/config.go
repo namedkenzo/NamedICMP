@@ -11,6 +11,8 @@ type Config struct {
 	PanelListen   string `json:"panel_listen"`
 	PublicHost    string `json:"public_host"`
 	ICMPListen    string `json:"icmp_listen"`
+	ICMPListen6   string `json:"icmp_listen6"`
+	EndpointFamily string `json:"endpoint_family"`
 	StatePath     string `json:"state_path"`
 	TLSCert       string `json:"tls_cert"`
 	TLSKey        string `json:"tls_key"`
@@ -24,7 +26,7 @@ type Config struct {
 }
 
 func DefaultConfig() Config {
-	return Config{PanelListen: "0.0.0.0:8443", ICMPListen: "0.0.0.0", StatePath: "/var/lib/namedicmp/state.json", MaxSessions: 256, MaxPerUser: 32, MaxUDPPerUser: 128, Window: 20000, ICMPPacketsPerSecond: 2500, ICMPBurstPackets: 32}
+	return Config{PanelListen: "0.0.0.0:8443", ICMPListen: "0.0.0.0", ICMPListen6:"::",EndpointFamily:"ipv4",StatePath: "/var/lib/namedicmp/state.json", MaxSessions: 256, MaxPerUser: 32, MaxUDPPerUser: 128, Window: 20000, ICMPPacketsPerSecond: 2500, ICMPBurstPackets: 32}
 }
 func LoadConfig(path string) (Config, error) {
 	c := DefaultConfig()
@@ -44,6 +46,7 @@ func LoadConfig(path string) (Config, error) {
 		return c, errors.New("invalid config")
 	}
 	if c.ICMPPacketsPerSecond < 0 || c.ICMPPacketsPerSecond > 100000 || c.ICMPBurstPackets < 1 || c.ICMPBurstPackets > 1024 {return c,errors.New("invalid ICMP pacing settings")}
+	if c.EndpointFamily!="ipv4"&&c.EndpointFamily!="ipv6" {return c,errors.New("invalid endpoint family")}
 	return c, nil
 }
 func SaveConfig(path string, c Config) error {

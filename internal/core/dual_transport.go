@@ -1,0 +1,40 @@
+package core
+
+import (
+ "errors"
+ "fmt"
+ "net"
+ "sync"
+ "namedicmp/internal/wire"
+)
+
+type transportResult struct {packet Packet;err error}
+type DualTransport struct { sockets map[int]*RawTransport;in chan transportResult;done chan struct{};once sync.Once;workers sync.WaitGroup;packet *packetReader;mode string }
+// Both families share authentication, accounting and the bounded paced writer.
+// Failure to bind one family is visible without taking the working family down.
+func ListenDual(v4,v6,mode string)(*DualTransport,[]string,error){
+ if mode==""{mode="raw_ip"};if mode!="raw_ip"&&mode!="raw_packet"{return nil,nil,errors.New("invalid reader mode")}
+ t:=&DualTransport{sockets:map[int]*RawTransport{},in:make(chan transportResult,128),done:make(chan struct{}),mode:mode}
+ var warnings []string
+ for family,address:=range map[int]string{4:v4,6:v6}{
+  if address==""{continue}
+  socket,err:=listenRawFamily(address,family)
+  if err!=nil{warnings=append(warnings,fmt.Sprintf("ICMPv%d unavailable: %v",family,err));continue}
+  t.sockets[family]=socket
+ }
+ if len(t.sockets)==0{return nil,warnings,errors.New("no ICMP family could be opened")}
+ if mode=="raw_packet"{
+  reader,err:=openPacketReader(t.sockets);if err!=nil{_ =t.Close();return nil,warnings,fmt.Errorf("raw packet reader unavailable (AF_PACKET permission/service profile required): %w",err)};t.packet=reader
+  t.workers.Add(1);go func(){defer t.workers.Done();for{p,err:=reader.Read();select{case t.in<-transportResult{p,err}:case <-t.done:return};if err!=nil{return}}}()
+  return t,warnings,nil
+ }
+ for _,socket:=range t.sockets{t.workers.Add(1);go func(s *RawTransport){defer t.workers.Done();for {p,err:=s.Read();select{case t.in<-transportResult{p,err}:case <-t.done:return};if err!=nil{return}}}(socket)}
+ return t,warnings,nil
+}
+func(t *DualTransport)Read()(Packet,error){select{case result:=<-t.in:return result.packet,result.err;case <-t.done:return Packet{},net.ErrClosed}}
+func(t *DualTransport)Write(p Packet,m wire.Message)error{family:=p.Family;if family==0{family=4};if s:=t.sockets[family];s!=nil{return s.Write(p,m)};return errors.New("ICMP family unavailable")}
+func(t *DualTransport)SetCredentials(credentials []wire.Credential)error{for _,s:=range t.sockets{if err:=s.SetCredentials(credentials);err!=nil{return err}};return nil}
+func(t *DualTransport)Families()[]int{var out []int;for _,family:=range []int{4,6}{if t.sockets[family]!=nil{out=append(out,family)}};return out}
+func(t *DualTransport)Close()error{t.once.Do(func(){close(t.done);if t.packet!=nil{_ =t.packet.Close()};for _,s:=range t.sockets{_ =s.Close()};t.workers.Wait()});return nil}
+func(c *Core)Families()[]int{if t,ok:=c.transport.(interface{Families()[]int});ok{return t.Families()};return []int{4}}
+func(c *Core)ReaderMode()string{if t,ok:=c.transport.(*DualTransport);ok{return t.mode};return "raw_ip"}

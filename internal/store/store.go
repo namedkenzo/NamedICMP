@@ -67,6 +67,7 @@ type disk struct {
 	Users     map[string]User     `json:"users"`
 	Outbounds map[string]Outbound `json:"outbounds"`
 	Admin     Admin               `json:"admin"`
+	Connection *ConnectionSettings `json:"connection,omitempty"`
 }
 type Store struct {
 	mu    sync.Mutex

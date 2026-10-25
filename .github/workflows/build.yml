@@ -2,7 +2,7 @@ name: Build Linux archives
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, ipv6-settings]
     tags: ['v*']
 permissions:
   contents: write

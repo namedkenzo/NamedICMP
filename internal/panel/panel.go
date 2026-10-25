@@ -39,6 +39,9 @@ type Panel struct {
 	sessions   map[string]Session
 	attempts   map[string]attempt
 	loginSlots chan struct{}
+	addrCache map[string][]string
+	addrAt time.Time
+	addrBusy,addrLookup bool
 }
 
 func New(s *store.Store, c *core.Core, conf store.Config) *Panel {
@@ -226,7 +229,7 @@ func (p *Panel) api(w http.ResponseWriter, r *http.Request) {
 			fail(w, 405, "method not allowed")
 			return
 		}
-		jsonReply(w, 200, map[string]any{"csrf": s.CSRF, "public_host": p.Config.PublicHost, "tls": r.TLS != nil, "version": "0.3.1", "protocol": "PingTunnel IPv4 TCP + UDP"})
+		jsonReply(w, 200, map[string]any{"csrf": s.CSRF, "public_host": p.connectionInfo()["effective_host"], "connection":p.connectionInfo(),"tls": r.TLS != nil, "version": "0.4.0", "protocol": "ICMPv4 / ICMPv6 TCP + UDP"})
 	case "/api/logout":
 		if r.Method != "POST" {
 			fail(w, 405, "method not allowed")
@@ -247,7 +250,19 @@ func (p *Panel) api(w http.ResponseWriter, r *http.Request) {
 			m["core"] = p.Core.Metrics()
 		}
 		m["users"] = p.Store.UserCount()
+		m["connection"]=p.connectionInfo()
 		jsonReply(w, 200, m)
+	case "/api/settings/connection":
+		switch r.Method {
+		case "GET":jsonReply(w,200,p.connectionInfo())
+		case "PUT":
+		 var input store.ConnectionSettings
+		 if readJSON(w,r,&input)!=nil{fail(w,400,"invalid connection settings");return}
+		 if input.Family=="ipv6"&&p.Core!=nil{available:=false;for _,family:=range p.Core.Families(){if family==6{available=true}};if !available{fail(w,400,"ICMPv6 socket unavailable; enable IPv6 on the VPS and restart the service first");return}}
+		 if err:=p.Store.SetConnection(input);err!=nil{fail(w,400,err.Error());return}
+		 jsonReply(w,200,p.connectionInfo())
+		default:fail(w,405,"method not allowed")
+		}
 	case "/api/users":
 		p.users(w, r)
 	case "/api/outbounds":
@@ -408,5 +423,5 @@ func (p *Panel) outbounds(w http.ResponseWriter, r *http.Request) {
 		fail(w, 405, "method not allowed")
 	}
 }
-func (p *Panel) RunStats(ctx context.Context) { p.Stats.Run(ctx) }
+func (p *Panel) RunStats(ctx context.Context) { p.enableAddressLookup();p.Stats.Run(ctx) }
 

@@ -17,6 +17,7 @@ import (
 
 type Packet struct {
 	Source          string
+	Family          int
 	EchoID, EchoSeq uint16
 	Message         wire.Message
 	Encryption      string
@@ -37,20 +38,23 @@ type RawTransport struct {
 	c        *net.IPConn
 	buffer   []byte
 	security *wire.Security
+	family int
 }
 
-func ListenRaw(address string) (*RawTransport, error) {
-	addr, err := net.ResolveIPAddr("ip4", address)
+func ListenRaw(address string) (*RawTransport, error) { return listenRawFamily(address,4) }
+func listenRawFamily(address string,family int) (*RawTransport, error) {
+	network,protocol:="ip4","ip4:icmp";if family==6 {network,protocol="ip6","ip6:ipv6-icmp"}
+	addr, err := net.ResolveIPAddr(network, address)
 	if err != nil {
 		return nil, err
 	}
-	c, err := net.ListenIP("ip4:icmp", addr)
+	c, err := net.ListenIP(protocol, addr)
 	if err != nil {
 		return nil, fmt.Errorf("ICMP socket requires CAP_NET_RAW: %w", err)
 	}
 	c.SetReadBuffer(4 << 20)
 	c.SetWriteBuffer(4 << 20)
-	return &RawTransport{c: c, buffer: make([]byte, 65535), security: wire.NewSecurity()}, nil
+	return &RawTransport{c: c, buffer: make([]byte, 65535), security: wire.NewSecurity(),family:family}, nil
 }
 func (r *RawTransport) Read() (Packet, error) {
 	b := r.buffer
@@ -59,7 +63,8 @@ func (r *RawTransport) Read() (Packet, error) {
 		if err != nil {
 			return Packet{}, err
 		}
-		_, id, seq, p, err := wire.DecodeEcho(b[:n])
+		decode:=wire.DecodeEcho;if r.family==6 {decode=wire.DecodeEcho6}
+		_, id, seq, p, err := decode(b[:n])
 		if err != nil {
 			continue
 		}
@@ -70,7 +75,7 @@ func (r *RawTransport) Read() (Packet, error) {
 		if mode == "none" {
 			m.Payload = append([]byte(nil), m.Payload...)
 		} // encrypted plaintext already owns its buffer
-		return Packet{Source: addr.IP.String(), EchoID: id, EchoSeq: seq, Message: m, Encryption: mode}, nil
+		return Packet{Source: addr.IP.String(), Family:r.family,EchoID: id, EchoSeq: seq, Message: m, Encryption: mode}, nil
 	}
 }
 func (r *RawTransport) Write(p Packet, m wire.Message) error {
@@ -79,6 +84,7 @@ func (r *RawTransport) Write(p Packet, m wire.Message) error {
 		return err
 	}
 	b := wire.Echo(byte(p.Message.ReplyType), p.EchoID, p.EchoSeq, payload)
+	if r.family==6 {typ:=byte(129);if p.Message.ReplyType==8 {typ=128};b=wire.Echo6(typ,p.EchoID,p.EchoSeq,payload)}
 	// This socket has one writer, so this deadline cannot affect another send.
 	if err:=r.c.SetWriteDeadline(time.Now().Add(200*time.Millisecond));err!=nil{return err}
 	_, err = r.c.WriteToIP(b, &net.IPAddr{IP: net.ParseIP(p.Source)})
