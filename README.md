@@ -1,16 +1,16 @@
 # NamedICMP
 
-**A clean control panel and independent server for TCP/UDP tunneling over ICMP.**
+**A web management panel for VPN over ICMP, with user management and TCP/UDP support.**
 
 [![Latest release](https://img.shields.io/github/v/release/namedkenzo/NamedICMP?color=2ea44f)](https://github.com/namedkenzo/NamedICMP/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![Platform](https://img.shields.io/badge/Linux-amd64%20%7C%20arm64-555555?logo=linux&logoColor=white)](#quick-install)
 
-[فارسی](README.fa.md) · [Server releases](https://github.com/namedkenzo/NamedICMP/releases) · [Client apps → NamedClients](https://github.com/namedkenzo/NamedClients) · [Architecture](docs/ARCHITECTURE.md)
+[فارسی](README.fa.md) · [Panel releases](https://github.com/namedkenzo/NamedICMP/releases) · [Client apps → NamedClients](https://github.com/namedkenzo/NamedClients) · [Architecture](docs/ARCHITECTURE.md)
 
 ## What lives here?
 
-**This repository is the web panel and Linux tunnel server.** The panel and independent Go core run as one systemd service, with no Node.js runtime, external database server or separate PingTunnel executable.
+**NamedICMP is a web management panel for VPN over ICMP.** It manages users, usage limits, connection profiles and outbounds. Its managed Go tunneling core runs alongside the panel in one systemd service; no separate PingTunnel executable, Node.js runtime or external database is required.
 
 **Windows and Android client apps belong in [NamedClients](https://github.com/namedkenzo/NamedClients).** Client versions and downloads are managed there independently. The initial Android app is available as a debug-signed development APK; it remains alpha.
 
@@ -33,7 +33,7 @@ bash /tmp/namedicmp-install.sh
 
 Choose **1 — Install** and enter the panel port, server address and administrator credentials. The repository is preset; no repository-name prompt is needed.
 
-The installer selects the exact Linux release for the server architecture, verifies SHA-256 and the executable version, and installs **only the server and panel**. It never downloads the Windows ZIP/EXE or an Android APK. If binaries are unavailable, automatic mode can build the selected server source.
+The installer selects the exact Linux release for the server architecture, verifies SHA-256 and the executable version, and installs **only the web panel and its managed core**. It never downloads the Windows ZIP/EXE or an Android APK. If binaries are unavailable, automatic mode can build the panel's managed core from source.
 
 HTTPS uses Certbot; your domain must resolve to the server and TCP 80 must be free and reachable. HTTP can bind publicly or use localhost with the printed SSH-tunnel command. Panel HTTPS and tunnel encryption are independent.
 
@@ -99,7 +99,7 @@ bash scripts/build.sh
 
 Linux archives are written to `dist/`. Use `NAMEDICMP_INSTALL_MODE=source`, `binary` or the default `auto`. Source tests can be enabled with `NAMEDICMP_RUN_TESTS=1`; repository/ref overrides are for development. Windows/Android build workflows are maintained in **NamedClients**, not here.
 
-[Security](SECURITY.md) · [Server release notes](docs/RELEASE-v0.3.1.md) · [Architecture](docs/ARCHITECTURE.md) · [Third-party notices](THIRD_PARTY_NOTICES.md)
+[Security](SECURITY.md) · [Panel release notes](docs/RELEASE-v0.3.1.md) · [Architecture](docs/ARCHITECTURE.md) · [Third-party notices](THIRD_PARTY_NOTICES.md)
 
 ## Support
 

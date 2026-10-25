@@ -1,7 +1,7 @@
 # namedP 0.1.0 alpha — Windows client
 
 First independent-version release of namedP. This client release does not
-install, replace or update the namedICMP web panel or server core.
+install, replace or update the namedICMP web panel or its tunneling core.
 
 - Native Windows x64 desktop UI; system theme by default, plus dark/light overrides.
 - Original animated dachshund: breathing/blinking idle, running while connecting,

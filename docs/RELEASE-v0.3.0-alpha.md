@@ -1,9 +1,9 @@
-# namedICMP 0.3.0 alpha — Server and web panel
+# namedICMP 0.3.0 alpha — Web management panel
 
 ## Separate Windows companion
 namedP is released independently as **0.1.0-alpha**, under tag
 `namedp-v0.1.0-alpha`, with its own Windows archive and release notes. This
-server release contains only the Linux server archives and SHA256SUMS.
+panel release contains only the Linux panel packages and SHA256SUMS.
 Installing or updating the panel does not install or run the Windows client.
 
 ## Panel fixes and maintenance

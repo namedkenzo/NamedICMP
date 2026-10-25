@@ -1,15 +1,15 @@
 # NamedICMP
 
-**پنل مدیریت و هستهٔ مستقل سرور برای تونل TCP و UDP روی ICMP.**
+**وب‌پنل مدیریت VPN over ICMP با مدیریت کاربران و پشتیبانی از TCP و UDP.**
 
 [![آخرین نسخه](https://img.shields.io/github/v/release/namedkenzo/NamedICMP?color=2ea44f)](https://github.com/namedkenzo/NamedICMP/releases/latest)
 [![مجوز MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-[English](README.md) · [ریلیزهای سرور](https://github.com/namedkenzo/NamedICMP/releases) · [کلاینت‌ها ← NamedClients](https://github.com/namedkenzo/NamedClients)
+[English](README.md) · [ریلیزهای پنل](https://github.com/namedkenzo/NamedICMP/releases) · [کلاینت‌ها ← NamedClients](https://github.com/namedkenzo/NamedClients)
 
 ## این مخزن برای چیست؟
 
-این مخزن مخصوص **وب‌پنل و هستهٔ سرور لینوکس** است. پنل و هستهٔ مستقل Go در یک سرویس systemd اجرا می‌شوند و به Node.js، دیتابیس خارجی یا اجرای جداگانهٔ PingTunnel نیاز ندارند.
+این مخزن مخصوص **وب‌پنل مدیریت VPN over ICMP** است: مدیریت کاربران، حجم و زمان، کانفیگ‌ها و خروجی‌ها. هستهٔ تونلِ مدیریت‌شدهٔ پنل همراه آن در یک سرویس systemd اجرا می‌شود و به اجرای جداگانهٔ PingTunnel، Node.js یا دیتابیس خارجی نیاز ندارد.
 
 کلاینت‌های ویندوز و اندروید در مخزن مستقل **[NamedClients](https://github.com/namedkenzo/NamedClients)** نگهداری می‌شوند. نسخه و دانلود کلاینت‌ها مستقل از پنل است. نسخهٔ اولیهٔ اندروید namedP به‌صورت APK آزمایشی با امضای توسعه موجود است و همچنان آلفاست.
 
@@ -33,7 +33,7 @@ bash /tmp/namedicmp-install.sh
 
 گزینهٔ **۱ — Install** را انتخاب کنید و پورت پنل، آدرس سرور و مشخصات مدیر را وارد کنید. نام مخزن از قبل تنظیم شده و پرسیده نمی‌شود.
 
-نصب‌کننده فایل مخصوص **سرور لینوکس** را مطابق معماری می‌گیرد و checksum و نسخهٔ فایل را بررسی می‌کند. **ZIP یا EXE ویندوز و APK اندروید را دریافت یا نصب نمی‌کند.** اگر فایل آماده موجود نباشد، حالت خودکار می‌تواند هستهٔ سرور را از سورس بسازد.
+نصب‌کننده فایل مخصوص **سرور لینوکس** را مطابق معماری می‌گیرد و checksum و نسخهٔ فایل را بررسی می‌کند. **ZIP یا EXE ویندوز و APK اندروید را دریافت یا نصب نمی‌کند.** اگر فایل آماده موجود نباشد، حالت خودکار می‌تواند هستهٔ مدیریت‌شدهٔ پنل را از سورس بسازد.
 
 برای HTTPS، دامنه باید به سرور اشاره کند و پورت ۸۰ آزاد و قابل دسترس باشد. HTTP می‌تواند عمومی باشد یا با localhost و SSH tunnel استفاده شود. HTTPS پنل و رمزنگاری تونل دو تنظیم مستقل‌اند.
 
@@ -99,7 +99,7 @@ bash scripts/build.sh
 
 خروجی لینوکس در `dist/` ساخته می‌شود. حالت نصب با `NAMEDICMP_INSTALL_MODE=source`، `binary` یا `auto` انتخاب می‌شود. تست نصب از سورس با `NAMEDICMP_RUN_TESTS=1` فعال می‌شود. فرایند ساخت ویندوز و اندروید در NamedClients قرار دارد.
 
-[امنیت](SECURITY.md) · [یادداشت نسخهٔ سرور](docs/RELEASE-v0.3.1.md) · [معماری](docs/ARCHITECTURE.md) · [مجوز وابستگی‌ها](THIRD_PARTY_NOTICES.md)
+[امنیت](SECURITY.md) · [یادداشت نسخهٔ پنل](docs/RELEASE-v0.3.1.md) · [معماری](docs/ARCHITECTURE.md) · [مجوز وابستگی‌ها](THIRD_PARTY_NOTICES.md)
 
 ## حمایت
 

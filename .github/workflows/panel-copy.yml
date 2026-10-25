@@ -1,0 +1,28 @@
+name: Refresh web-panel descriptions
+on:
+  push:
+    branches: [main]
+    paths: ['README*', 'docs/**', '.github/workflows/panel-copy.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  copy:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[panel-copy]')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Update descriptions only; preserve assets and release flags
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for notes in docs/RELEASE-*.md; do
+            tag=${notes#docs/RELEASE-}
+            tag=${tag%.md}
+            if ! title=$(gh release view "$tag" --json name --jq .name 2>/dev/null); then continue; fi
+            if [[ "$GITHUB_REPOSITORY" == namedkenzo/NamedICMP && "$tag" == v* ]]; then
+              title="namedICMP $tag · Web panel"
+            fi
+            gh release edit "$tag" --title "$title" --notes-file "$notes"
+            echo "Updated description: $tag"
+          done

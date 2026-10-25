@@ -45,5 +45,5 @@ jobs:
           if [[ "$server_tag" == *-* ]]; then
             release_flags=(--prerelease)
           fi
-          gh release create "$server_tag" dist/* --target "$GITHUB_SHA" "${release_flags[@]}" --title "namedICMP $server_tag · Server and panel" --notes-file "docs/RELEASE-${server_tag}.md"
+          gh release create "$server_tag" dist/* --target "$GITHUB_SHA" "${release_flags[@]}" --title "namedICMP $server_tag · Web panel" --notes-file "docs/RELEASE-${server_tag}.md"
 
