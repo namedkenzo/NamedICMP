@@ -298,6 +298,8 @@ PY
  cp -p -- "$PREFIX/namedicmp" "$backup_dir/namedicmp.previous"
  # Copy before stopping: a full disk must not interrupt the running version.
  install -m 0755 "$workdir/namedicmp" "$PREFIX/namedicmp.next"
+ # Refresh the address-family allowlist before downtime, also for stopped services.
+ install_service
  systemctl stop namedicmp.service
  if ! cp -p -- "$state_file" "$backup_dir/state.json";then
   rm -f -- "$PREFIX/namedicmp.next"
@@ -309,7 +311,6 @@ PY
   say 'Unable to replace executable; previous version retained.';return 1
  fi
  if [[ $was_running == y ]];then
-  install_service
   local healthy=n
   if systemctl start namedicmp.service;then
    if wait_healthy;then healthy=y;fi

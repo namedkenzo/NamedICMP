@@ -33,7 +33,8 @@ func(p *Panel)connectionInfo()map[string]any{
  value:=p.connection();addresses:=p.networkAddresses();host:=value.Host
  if host=="" && len(addresses[value.Family])>0{host=addresses[value.Family][0]}
  families:=[]int{};reader:="off";if p.Core!=nil{families=p.Core.Families();reader=p.Core.ReaderMode()}
- return map[string]any{"family":value.Family,"host":value.Host,"effective_host":host,"reader_mode":value.ReaderMode,"active_reader_mode":reader,"restart_required":p.Core!=nil&&reader!=value.ReaderMode,"addresses":addresses,"listen_families":families}
+ warning:="";if p.Core!=nil{warning=p.Core.ReaderWarning()}
+ return map[string]any{"family":value.Family,"host":value.Host,"effective_host":host,"reader_mode":value.ReaderMode,"active_reader_mode":reader,"reader_warning":warning,"restart_required":p.Core!=nil&&reader!=value.ReaderMode,"addresses":addresses,"listen_families":families}
 }
 func(p *Panel)enableAddressLookup(){p.mu.Lock();p.addrLookup=os.Getenv("NAMEDICMP_PUBLIC_IP_LOOKUP")!="0";p.mu.Unlock()}
 func(p *Panel)networkAddresses()map[string][]string{

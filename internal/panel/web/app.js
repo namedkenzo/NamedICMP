@@ -66,7 +66,7 @@ document.querySelectorAll('.theme-toggle').forEach(n=>n.onclick=()=>{theme=theme
 document.querySelectorAll('.language-toggle').forEach(n=>n.onclick=()=>{lang=lang==='fa'?'en':'fa';localStorage.setItem('namedicmp-language',lang);preferences();});
 let toastTimer;function toast(msg){$('toast').textContent=msg;$('toast').hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').hidden=true,4500);}
 async function api(path,method='GET',data){const options={method,credentials:'same-origin',headers:{}};if(data!==undefined){options.headers['Content-Type']='application/json';options.body=JSON.stringify(data);}if(method!=='GET'&&csrf)options.headers['X-CSRF-Token']=csrf;let response;try{response=await fetch('/api/'+path,options);}catch{throw new Error(t('networkError'));}let payload;try{payload=await response.json();}catch{throw new Error(t('networkError'));}if(!response.ok){if(response.status===401&&path!=='login'){showLogin();}throw new Error(response.status===429?t('tooMany'):response.status===401?t('credentialsError'):(payload.error||t('networkError')));}return payload;}
-function showLogin(){clearTimeout(pollTimer);csrf='';session=null;home=null;revealedAddresses.clear();connectionDirty=false;$('host-addresses').replaceChildren();$('app').hidden=true;$('login').hidden=false;$('password').value='';$('editor').close();document.body.classList.remove('drawer-open');}
+function showLogin(){clearTimeout(pollTimer);csrf='';session=null;home=null;users=[];outbounds=[];$('editor-fields').replaceChildren();revealedAddresses.clear();connectionDirty=false;$('host-addresses').replaceChildren();$('app').hidden=true;$('login').hidden=false;$('password').value='';$('editor').close();document.body.classList.remove('drawer-open');}
 async function enter(){session=await api('session');csrf=session.csrf;$('login').hidden=true;$('app').hidden=false;await refresh();schedule();}
 $('login-form').onsubmit=async event=>{event.preventDefault();$('login-error').textContent='';$('sign-in').disabled=true;try{const answer=await api('login','POST',{username:$('username').value,password:$('password').value});csrf=answer.csrf;$('password').value='';await enter();}catch(err){$('login-error').textContent=err.message;}finally{$('sign-in').disabled=false;}};
 $('logout').onclick=async()=>{try{await api('logout','POST',{});showLogin();}catch(err){toast(err.message);}};
@@ -133,7 +133,7 @@ function renderConnectionSettings(){
  if(!connectionDirty){$('endpoint-family').value=value.family||'ipv4';$('endpoint-host').value=value.host||'';$('packet-reader').value=value.reader_mode||'raw_ip';}
  const family=$('endpoint-family').value,addresses=value.addresses?.[family]||[];
  $('endpoint-host').placeholder=addresses[0]||t('notDetected');$('endpoint-detection').textContent=t('detected')+': '+(addresses.join(' , ')||t('notDetected'));
- $('reader-status').textContent=value.restart_required?t('restartReader'):t('activeReader')+': '+(value.active_reader_mode||'off');
+ $('reader-status').textContent=value.reader_warning||(value.restart_required?t('restartReader'):t('activeReader')+': '+(value.active_reader_mode||'off'));
 }
 document.querySelectorAll('[data-settings-tab]').forEach(control=>control.onclick=()=>{
  const connection=control.dataset.settingsTab==='connection';$('settings-connection').hidden=!connection;$('page-outbounds').hidden=connection;

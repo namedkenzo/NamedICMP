@@ -16,6 +16,8 @@
 
 ## Features
 
+- **Connection Settings:** IPv4/IPv6 endpoint selection, IP/domain override, automatic address discovery and an advanced Linux packet-reader option. Outbounds now have their own Settings tab. Home addresses stay masked until tapped. [IPv6 and reader notes](docs/IPV6-READERS.md).
+
 - **Users:** separate credentials and traffic accounting, quotas, expiry dates and live enable/disable.
 - **Transport:** independent TCP/UDP sessions over IPv4 ICMP; direct, SOCKS5 and HTTP CONNECT outbounds.
 - **Dashboard:** English/Persian, system-aware dark/light themes, server metrics and tunnel diagnostics.
@@ -24,14 +26,14 @@
 
 ## Quick install
 
-Use **Debian/Ubuntu with systemd**, root access and public IPv4. Linux **amd64 and arm64** are supported. Allow ICMP and the chosen panel TCP port in your host/provider firewall.
+Use **Debian/Ubuntu with systemd**, root access and public IPv4 or routed IPv6. Linux **amd64 and arm64** are supported. Allow ICMP and the chosen panel TCP port in your host/provider firewall.
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/namedkenzo/NamedICMP/main/install.sh -o /tmp/namedicmp-install.sh
 bash /tmp/namedicmp-install.sh
 ```
 
-Choose **1 — Install** and enter the panel port, server address and administrator credentials. The repository is preset; no repository-name prompt is needed.
+Choose **1 — Install** and choose IPv4/IPv6, an automatic or explicit IP/domain, packet reader, panel port and administrator credentials. The repository is preset; no repository-name prompt is needed.
 
 The installer selects the exact Linux release for the server architecture, verifies SHA-256 and the executable version, and installs **only the web panel and its managed core**. It never downloads the Windows ZIP/EXE or an Android APK. If binaries are unavailable, automatic mode can build the panel's managed core from source.
 
@@ -46,7 +48,7 @@ Create a user in **Users**, open **Config**, then copy the complete connection U
 | Client | Where to get it | Notes |
 | --- | --- | --- |
 | **namedP — Windows** | [NamedClients](https://github.com/namedkenzo/NamedClients) · [Downloads](https://github.com/namedkenzo/NamedClients/releases) | Our dedicated app; VPN and SOCKS5 modes; currently alpha |
-| **namedP — Android** | [Android guide](https://github.com/namedkenzo/NamedClients/tree/main/android) · [Development APK](https://github.com/namedkenzo/NamedClients/releases/tag/android-v0.1.0-alpha) | Initial alpha; debug-signed; real-phone/VPS acceptance pending |
+| **namedP — Android** | [Android guide](https://github.com/namedkenzo/NamedClients/tree/main/android) · [Development APK](https://github.com/namedkenzo/NamedClients/releases/tag/android-v0.2.0-alpha) | Initial alpha; debug-signed; real-phone/VPS acceptance pending |
 | **Original PingTunnel CLI** | [esrrhs/pingtunnel](https://github.com/esrrhs/pingtunnel) · [Releases](https://github.com/esrrhs/pingtunnel/releases) | Upstream command-line client; choose the matching OS build |
 | **Community PingTunnel Client** | [itismoej/pingtunnel-client](https://github.com/itismoej/pingtunnel-client) · [Releases](https://github.com/itismoej/pingtunnel-client/releases) | Android/desktop GUI; linked from the upstream PingTunnel project |
 | **Ping Tunnel — iOS** | [App Store](https://apps.apple.com/us/app/ping-tunnel-vpn-over-icmp/id6748279683) | Check the installed version's supported modes |
@@ -99,7 +101,7 @@ bash scripts/build.sh
 
 Linux archives are written to `dist/`. Use `NAMEDICMP_INSTALL_MODE=source`, `binary` or the default `auto`. Source tests can be enabled with `NAMEDICMP_RUN_TESTS=1`; repository/ref overrides are for development. Windows/Android build workflows are maintained in **NamedClients**, not here.
 
-[Security](SECURITY.md) · [Panel release notes](docs/RELEASE-v0.3.1.md) · [Architecture](docs/ARCHITECTURE.md) · [Third-party notices](THIRD_PARTY_NOTICES.md)
+[Security](SECURITY.md) · [Panel release notes](docs/RELEASE-v0.4.0.md) · [Architecture](docs/ARCHITECTURE.md) · [Third-party notices](THIRD_PARTY_NOTICES.md)
 
 ## Support
 

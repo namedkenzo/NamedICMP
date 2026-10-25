@@ -21,6 +21,9 @@ Address detection does not establish external reachability.
   Captured fragments/IPv6 extension headers are rejected. It requires CAP_NET_RAW
   and AF_PACKET in the service allowlist; update with the current installer.
   Restart after changing this mode; active and configured values are shown separately.
+  If the capture socket cannot open, raw IP remains active with an explicit
+  warning instead of taking the panel offline. Do not mistake a saved choice
+  for confirmation that the reader is active.
 - NEW is a firewall conntrack state, not a socket type. There is no fake NEW
   reader. AF_PACKET may see a delivered frame before local IP-layer filtering;
   it cannot recover packets blocked by the carrier, provider or upstream router.

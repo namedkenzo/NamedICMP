@@ -9,7 +9,7 @@ import (
 )
 
 type transportResult struct {packet Packet;err error}
-type DualTransport struct { sockets map[int]*RawTransport;in chan transportResult;done chan struct{};once sync.Once;workers sync.WaitGroup;packet *packetReader;mode string }
+type DualTransport struct { sockets map[int]*RawTransport;in chan transportResult;done chan struct{};once sync.Once;workers sync.WaitGroup;packet *packetReader;mode string;readerWarning string }
 // Both families share authentication, accounting and the bounded paced writer.
 // Failure to bind one family is visible without taking the working family down.
 func ListenDual(v4,v6,mode string)(*DualTransport,[]string,error){
@@ -24,9 +24,13 @@ func ListenDual(v4,v6,mode string)(*DualTransport,[]string,error){
  }
  if len(t.sockets)==0{return nil,warnings,errors.New("no ICMP family could be opened")}
  if mode=="raw_packet"{
-  reader,err:=openPacketReader(t.sockets);if err!=nil{_ =t.Close();return nil,warnings,fmt.Errorf("raw packet reader unavailable (AF_PACKET permission/service profile required): %w",err)};t.packet=reader
+  reader,err:=openPacketReader(t.sockets);if err!=nil{
+   t.mode="raw_ip";t.readerWarning=fmt.Sprintf("AF_PACKET unavailable; raw IP remains active. Check CAP_NET_RAW and the service address-family profile: %v",err);warnings=append(warnings,t.readerWarning)
+  }else{
+  t.packet=reader
   t.workers.Add(1);go func(){defer t.workers.Done();for{p,err:=reader.Read();select{case t.in<-transportResult{p,err}:case <-t.done:return};if err!=nil{return}}}()
   return t,warnings,nil
+  }
  }
  for _,socket:=range t.sockets{t.workers.Add(1);go func(s *RawTransport){defer t.workers.Done();for {p,err:=s.Read();select{case t.in<-transportResult{p,err}:case <-t.done:return};if err!=nil{return}}}(socket)}
  return t,warnings,nil
@@ -38,3 +42,4 @@ func(t *DualTransport)Families()[]int{var out []int;for _,family:=range []int{4,
 func(t *DualTransport)Close()error{t.once.Do(func(){close(t.done);if t.packet!=nil{_ =t.packet.Close()};for _,s:=range t.sockets{_ =s.Close()};t.workers.Wait()});return nil}
 func(c *Core)Families()[]int{if t,ok:=c.transport.(interface{Families()[]int});ok{return t.Families()};return []int{4}}
 func(c *Core)ReaderMode()string{if t,ok:=c.transport.(*DualTransport);ok{return t.mode};return "raw_ip"}
+func(c *Core)ReaderWarning()string{if t,ok:=c.transport.(*DualTransport);ok{return t.readerWarning};return ""}

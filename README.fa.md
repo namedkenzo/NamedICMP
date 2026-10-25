@@ -15,6 +15,8 @@
 
 ## امکانات
 
+- **تنظیمات اتصال:** انتخاب IPv4/IPv6، آی‌پی یا دامنه، تشخیص آدرس و روش پیشرفتهٔ دریافت بسته. خروجی‌ها تب مستقل در تنظیمات دارند و IPهای خانه تا لمس مخفی هستند. [راهنمای IPv6 و Raw](docs/IPV6-READERS.md).
+
 - **کاربران:** کلید و مصرف مستقل، محدودیت حجم، تاریخ انقضا و فعال/غیرفعال‌سازی زنده.
 - **تونل:** جریان‌های جداگانهٔ TCP و UDP روی ICMP نسخهٔ IPv4.
 - **خروجی‌ها:** مستقیم، SOCKS5 برای TCP/UDP و HTTP CONNECT برای TCP.
@@ -24,14 +26,14 @@
 
 ## نصب سریع
 
-سرور **Debian/Ubuntu با systemd**، دسترسی root، IPv4 عمومی و معماری **amd64 یا arm64** لازم است. ICMP و پورت TCP پنل را در فایروال سرور و ارائه‌دهنده باز کنید.
+سرور **Debian/Ubuntu با systemd**، دسترسی root، IPv4 عمومی یا IPv6 مسیریابی‌شده و معماری **amd64 یا arm64** لازم است. ICMP و پورت TCP پنل را در فایروال سرور و ارائه‌دهنده باز کنید.
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/namedkenzo/NamedICMP/main/install.sh -o /tmp/namedicmp-install.sh
 bash /tmp/namedicmp-install.sh
 ```
 
-گزینهٔ **۱ — Install** را انتخاب کنید و پورت پنل، آدرس سرور و مشخصات مدیر را وارد کنید. نام مخزن از قبل تنظیم شده و پرسیده نمی‌شود.
+گزینهٔ **۱ — Install** را انتخاب کنید و خانوادهٔ IPv4/IPv6، آدرس خودکار یا آی‌پی/دامنهٔ دلخواه، روش دریافت بسته، پورت پنل و مشخصات مدیر را انتخاب کنید. نام مخزن از قبل تنظیم شده و پرسیده نمی‌شود.
 
 نصب‌کننده فایل مخصوص **سرور لینوکس** را مطابق معماری می‌گیرد و checksum و نسخهٔ فایل را بررسی می‌کند. **ZIP یا EXE ویندوز و APK اندروید را دریافت یا نصب نمی‌کند.** اگر فایل آماده موجود نباشد، حالت خودکار می‌تواند هستهٔ مدیریت‌شدهٔ پنل را از سورس بسازد.
 
@@ -46,7 +48,7 @@ bash /tmp/namedicmp-install.sh
 | کلاینت | دریافت | توضیح |
 | --- | --- | --- |
 | **namedP ویندوز** | [NamedClients](https://github.com/namedkenzo/NamedClients) · [دانلود](https://github.com/namedkenzo/NamedClients/releases) | کلاینت اختصاصی با VPN و SOCKS5؛ فعلاً آلفا |
-| **namedP اندروید** | [راهنما](https://github.com/namedkenzo/NamedClients/tree/main/android) · [APK آزمایشی](https://github.com/namedkenzo/NamedClients/releases/tag/android-v0.1.0-alpha) | آلفا با امضای توسعه؛ نیازمند تست گوشی و سرور واقعی |
+| **namedP اندروید** | [راهنما](https://github.com/namedkenzo/NamedClients/tree/main/android) · [APK آزمایشی](https://github.com/namedkenzo/NamedClients/releases/tag/android-v0.2.0-alpha) | آلفا با امضای توسعه؛ نیازمند تست گوشی و سرور واقعی |
 | **خط فرمان اصلی PingTunnel** | [esrrhs/pingtunnel](https://github.com/esrrhs/pingtunnel) · [Releases](https://github.com/esrrhs/pingtunnel/releases) | کلاینت اصلی؛ فایل مناسب سیستم‌عامل را انتخاب کنید |
 | **رابط گرافیکی جامعهٔ PingTunnel** | [itismoej/pingtunnel-client](https://github.com/itismoej/pingtunnel-client) · [Releases](https://github.com/itismoej/pingtunnel-client/releases) | اندروید و دسکتاپ؛ در پروژهٔ اصلی PingTunnel نیز معرفی شده است |
 | **Ping Tunnel برای iOS** | [App Store](https://apps.apple.com/us/app/ping-tunnel-vpn-over-icmp/id6748279683) | پشتیبانی حالت‌های اتصال را در نسخهٔ نصب‌شده بررسی کنید |
@@ -99,7 +101,7 @@ bash scripts/build.sh
 
 خروجی لینوکس در `dist/` ساخته می‌شود. حالت نصب با `NAMEDICMP_INSTALL_MODE=source`، `binary` یا `auto` انتخاب می‌شود. تست نصب از سورس با `NAMEDICMP_RUN_TESTS=1` فعال می‌شود. فرایند ساخت ویندوز و اندروید در NamedClients قرار دارد.
 
-[امنیت](SECURITY.md) · [یادداشت نسخهٔ پنل](docs/RELEASE-v0.3.1.md) · [معماری](docs/ARCHITECTURE.md) · [مجوز وابستگی‌ها](THIRD_PARTY_NOTICES.md)
+[امنیت](SECURITY.md) · [یادداشت نسخهٔ پنل](docs/RELEASE-v0.4.0.md) · [معماری](docs/ARCHITECTURE.md) · [مجوز وابستگی‌ها](THIRD_PARTY_NOTICES.md)
 
 ## حمایت
 
