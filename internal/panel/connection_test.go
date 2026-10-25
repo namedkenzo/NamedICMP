@@ -1,6 +1,10 @@
 package panel
 
-import("net/http/httptest";"net/http";"path/filepath";"strings";"testing";"time";"encoding/json";"namedicmp/internal/store")
+import("net/http/httptest";"net/http";"path/filepath";"strings";"testing";"time";"encoding/json";"net/netip";"namedicmp/internal/store")
+func TestAddressDetectionRejectsPrivateSpecialAndNATRanges(t *testing.T){
+ for _,value:=range []string{"127.0.0.1","10.0.0.1","100.64.0.1","192.0.2.1","198.18.0.1","::1","fc00::1","fe80::1","2001:db8::1"}{if publicAddress(netip.MustParseAddr(value)){t.Fatal("not a public detection candidate",value)}}
+ for _,value:=range []string{"8.8.8.8","2001:4860:4860::8888"}{if !publicAddress(netip.MustParseAddr(value)){t.Fatal("public address rejected")}}
+}
 func TestConnectionSettingsRequireAuthCSRFAndPreserveFamily(t *testing.T){
  s,err:=store.Open(filepath.Join(t.TempDir(),"state.json"));if err!=nil{t.Fatal(err)};defer s.Close()
  conf:=store.DefaultConfig();conf.PublicHost="192.0.2.10";p:=New(s,nil,conf)

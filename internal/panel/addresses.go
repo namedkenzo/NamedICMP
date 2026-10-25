@@ -19,7 +19,7 @@ func detectedAddresses()map[string][]string{
  interfaces,_:=net.Interfaces();seen:=map[string]bool{}
  for _,iface:=range interfaces {if iface.Flags&net.FlagUp==0||iface.Flags&net.FlagLoopback!=0{continue};addresses,_:=iface.Addrs();for _,a:=range addresses{
   prefix,err:=netip.ParsePrefix(a.String());if err!=nil{continue};ip:=prefix.Addr().Unmap()
-  if !ip.IsGlobalUnicast()||ip.IsPrivate()||ip.IsLinkLocalUnicast()||seen[ip.String()]{continue}
+  if !publicAddress(ip)||seen[ip.String()]{continue}
   family:="ipv6";if ip.Is4(){family="ipv4"};seen[ip.String()]=true;result[family]=append(result[family],ip.String())
  }}
  for _,ips:=range result{sort.Strings(ips)};return result
@@ -60,5 +60,7 @@ func publicIP(family string)string{
  client:=&http.Client{Transport:transport,Timeout:2*time.Second,CheckRedirect:func(*http.Request,[]*http.Request)error{return http.ErrUseLastResponse}}
  response,err:=client.Do(request);if err!=nil{return ""};defer response.Body.Close();if response.StatusCode!=200{return ""}
  body,err:=io.ReadAll(io.LimitReader(response.Body,65));if err!=nil||len(body)>64{return ""}
- ip,err:=netip.ParseAddr(strings.TrimSpace(string(body)));if err!=nil||!ip.IsGlobalUnicast()||ip.IsPrivate()||ip.Is4In6()||(ip.Is4()!=(family=="ipv4")){return ""};return ip.String()
+ ip,err:=netip.ParseAddr(strings.TrimSpace(string(body)));if err!=nil||!publicAddress(ip)||ip.Is4In6()||(ip.Is4()!=(family=="ipv4")){return ""};return ip.String()
 }
+var nonPublic=[]netip.Prefix{netip.MustParsePrefix("0.0.0.0/8"),netip.MustParsePrefix("100.64.0.0/10"),netip.MustParsePrefix("192.0.0.0/24"),netip.MustParsePrefix("192.0.2.0/24"),netip.MustParsePrefix("198.18.0.0/15"),netip.MustParsePrefix("198.51.100.0/24"),netip.MustParsePrefix("203.0.113.0/24"),netip.MustParsePrefix("240.0.0.0/4"),netip.MustParsePrefix("2001:db8::/32")}
+func publicAddress(ip netip.Addr)bool{if !ip.IsGlobalUnicast()||ip.IsPrivate()||ip.IsLinkLocalUnicast(){return false};for _,prefix:=range nonPublic{if prefix.Contains(ip){return false}};return true}
