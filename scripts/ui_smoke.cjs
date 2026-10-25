@@ -41,6 +41,7 @@ async function availablePort() { const s=net.createServer(); await new Promise(r
   await wait(()=>!d.querySelector('#editor').hasAttribute('open'));await wait(()=>d.querySelector('#outbound-cards').textContent.includes('DOM-test-proxy'));
   d.querySelector('#settings-connection-tab').click();
   d.querySelector('#endpoint-family').value='ipv6';d.querySelector('#endpoint-family').dispatchEvent(new w.Event('input',{bubbles:true}));
+  if(d.querySelector('#endpoint-host').value!=='')throw Error('Switching family kept the incompatible old literal instead of automatic detection');
   d.querySelector('#endpoint-host').value='2001:db8::25';d.querySelector('#endpoint-host').dispatchEvent(new w.Event('input',{bubbles:true}));submit('#connection-settings-form');
   await wait(()=>!d.querySelector('#save-connection-settings').disabled);
   if(d.querySelector('#settings-error').textContent)throw Error(d.querySelector('#settings-error').textContent);

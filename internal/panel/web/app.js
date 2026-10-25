@@ -139,7 +139,14 @@ document.querySelectorAll('[data-settings-tab]').forEach(control=>control.onclic
  const connection=control.dataset.settingsTab==='connection';$('settings-connection').hidden=!connection;$('page-outbounds').hidden=connection;
  document.querySelectorAll('[data-settings-tab]').forEach(tab=>tab.setAttribute('aria-selected',String(tab===control)));
 });
-for(const id of ['endpoint-family','endpoint-host','packet-reader'])$(id).addEventListener('input',()=>{connectionDirty=true;renderConnectionSettings();});
+for(const id of ['endpoint-family','endpoint-host','packet-reader'])$(id).addEventListener('input',()=>{
+ connectionDirty=true;
+ if(id==='endpoint-family'){
+  const host=$('endpoint-host').value.trim(),family=$('endpoint-family').value;
+  if((family==='ipv6'&&/^\d+(\.\d+){3}$/.test(host))||(family==='ipv4'&&host.includes(':')))$('endpoint-host').value='';
+ }
+ renderConnectionSettings();
+});
 $('endpoint-auto').onclick=()=>{connectionDirty=true;$('endpoint-host').value='';renderConnectionSettings();};
 $('connection-settings-form').onsubmit=async event=>{
  event.preventDefault();$('settings-error').textContent='';$('save-connection-settings').disabled=true;
