@@ -23,7 +23,7 @@ get_port(){ local answer; while :;do ask answer 'Web panel port:' '8443';if vali
 packages(){
  command -v apt-get >/dev/null || { say 'This installer supports Debian/Ubuntu. See README for manual Linux installation.'; return 1; }
  local missing=() package
- for package in ca-certificates curl tar python3 openssl iproute2;do
+ for package in ca-certificates curl tar python3 openssl iproute2 procps;do
   if ! dpkg-query -W -f='${Status}' "$package" 2>/dev/null | grep -qx 'install ok installed';then missing+=("$package");fi
  done
  if (( ${#missing[@]} ));then apt-get update;apt-get install -y --no-install-recommends "${missing[@]}";fi
