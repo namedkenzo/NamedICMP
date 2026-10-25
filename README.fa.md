@@ -66,6 +66,8 @@ bash /tmp/namedicmp-install.sh
 
 نصب و آپدیت، تنظیمات قابل‌بازگشت شبکه را خودکار اعمال می‌کنند و هسته نرخ ارسال ICMP را کنترل می‌کند. [تنظیمات، بازگردانی و محدودیت‌های میزبان](docs/NETWORK-TUNING.md). این موارد تضمینی برای جلوگیری از مسدودسازی یا خاموش‌شدن از طرف ضد‌دیداس شرکت میزبان نیستند.
 
+برای ارتقا از ۰.۳.۰، دستور نصب بالای صفحه را دوباره اجرا و **گزینهٔ ۲، Update** را انتخاب کنید تا مدیر جدید و ابزار تنظیم شبکه نصب شوند. منوی قدیمی به‌تنهایی ابزار جدید را نصب نمی‌کند. اطلاعات کاربران و تنظیمات حفظ می‌شوند؛ اتصال‌های فعال یک بار بازنشانی می‌شوند.
+
 ```bash
 systemctl status namedicmp --no-pager
 journalctl -u namedicmp -n 60 --no-pager
@@ -97,7 +99,7 @@ bash scripts/build.sh
 
 خروجی لینوکس در `dist/` ساخته می‌شود. حالت نصب با `NAMEDICMP_INSTALL_MODE=source`، `binary` یا `auto` انتخاب می‌شود. تست نصب از سورس با `NAMEDICMP_RUN_TESTS=1` فعال می‌شود. فرایند ساخت ویندوز و اندروید در NamedClients قرار دارد.
 
-[امنیت](SECURITY.md) · [یادداشت نسخهٔ سرور](docs/RELEASE-v0.3.0.md) · [معماری](docs/ARCHITECTURE.md) · [مجوز وابستگی‌ها](THIRD_PARTY_NOTICES.md)
+[امنیت](SECURITY.md) · [یادداشت نسخهٔ سرور](docs/RELEASE-v0.3.1.md) · [معماری](docs/ARCHITECTURE.md) · [مجوز وابستگی‌ها](THIRD_PARTY_NOTICES.md)
 
 ## حمایت
 

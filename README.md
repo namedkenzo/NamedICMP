@@ -66,6 +66,8 @@ Changing credential mode reconnects that user's sessions. Numeric keys do not en
 
 Install/Update now apply reversible network tuning and the core paces outgoing ICMP bursts. [Settings, restore and provider limitations](docs/NETWORK-TUNING.md). These cannot guarantee protection from upstream/provider anti-DDoS shutdowns.
 
+Upgrading from 0.3.0? Run the current installer command above and choose **2 · Update**. The older installed manager cannot install the new tuning helper itself. The current manager preserves users/settings and applies the profile automatically; active tunnels reconnect once.
+
 ```bash
 systemctl status namedicmp --no-pager
 journalctl -u namedicmp -n 60 --no-pager
@@ -97,7 +99,7 @@ bash scripts/build.sh
 
 Linux archives are written to `dist/`. Use `NAMEDICMP_INSTALL_MODE=source`, `binary` or the default `auto`. Source tests can be enabled with `NAMEDICMP_RUN_TESTS=1`; repository/ref overrides are for development. Windows/Android build workflows are maintained in **NamedClients**, not here.
 
-[Security](SECURITY.md) · [Server release notes](docs/RELEASE-v0.3.0.md) · [Architecture](docs/ARCHITECTURE.md) · [Third-party notices](THIRD_PARTY_NOTICES.md)
+[Security](SECURITY.md) · [Server release notes](docs/RELEASE-v0.3.1.md) · [Architecture](docs/ARCHITECTURE.md) · [Third-party notices](THIRD_PARTY_NOTICES.md)
 
 ## Support
 
