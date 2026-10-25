@@ -101,7 +101,7 @@ bash scripts/build.sh
 
 خروجی لینوکس در `dist/` ساخته می‌شود. حالت نصب با `NAMEDICMP_INSTALL_MODE=source`، `binary` یا `auto` انتخاب می‌شود. تست نصب از سورس با `NAMEDICMP_RUN_TESTS=1` فعال می‌شود. فرایند ساخت ویندوز و اندروید در NamedClients قرار دارد.
 
-[امنیت](SECURITY.md) · [یادداشت نسخهٔ پنل](docs/RELEASE-v0.4.1.md) · [معماری](docs/ARCHITECTURE.md) · [مجوز وابستگی‌ها](THIRD_PARTY_NOTICES.md)
+[امنیت](SECURITY.md) · [یادداشت نسخهٔ پنل](docs/RELEASE-v0.4.2.md) · [معماری](docs/ARCHITECTURE.md) · [مجوز وابستگی‌ها](THIRD_PARTY_NOTICES.md)
 
 ## حمایت
 

@@ -107,7 +107,7 @@ type Core struct {
 	udpIn, udpOut, tcpIn, tcpOut, dialErrors, oversizedUDP atomic.Uint64
 	decode                                                 *zstd.Decoder
 	stopping                                               bool
-	controlOut, dataOut chan responsePacket
+	controlOut, dataOut, udpOutQueue chan responsePacket
 	writeDone, stopWrite chan struct{}
 	writeQueueDrops, sessionQueueDrops, sessionLimitDrops, socketWriteErrors atomic.Uint64
 	outboundDNS, outboundPolicy, outboundTimeout, outboundNetwork, outboundOther atomic.Uint64
@@ -126,7 +126,7 @@ func New(s *store.Store, c store.Config, t Transport) (*Core, error) {
 	if err != nil {
 		return nil, err
 	}
-	core := &Core{Store: s, Config: c, transport: t, sessions: map[sessionKey]*session{}, perUser: map[string]int{}, udpPerUser: map[string]int{}, tcpPerUser: map[string]int{}, decode: d, pingBuckets: map[string]*bucket{}, controlOut:make(chan responsePacket,256),dataOut:make(chan responsePacket,2048),writeDone:make(chan struct{}),stopWrite:make(chan struct{})}
+	core := &Core{Store: s, Config: c, transport: t, sessions: map[sessionKey]*session{}, perUser: map[string]int{}, udpPerUser: map[string]int{}, tcpPerUser: map[string]int{}, decode: d, pingBuckets: map[string]*bucket{}, controlOut:make(chan responsePacket,256),dataOut:make(chan responsePacket,2048),udpOutQueue:make(chan responsePacket,64),writeDone:make(chan struct{}),stopWrite:make(chan struct{})}
 	if err := core.RefreshCredentials(); err != nil {
 		d.Close()
 		return nil, err
@@ -299,11 +299,15 @@ func (c *Core) Handle(ctx context.Context, p Packet) {
 func (c *Core) reply(p Packet, m wire.Message) {
 	m.TCP = p.Message.TCP
 	queue:=c.dataOut
+	if m.Kind==0&&!m.TCP{queue=c.udpOutQueue}
 	if m.Kind!=0 {queue=c.controlOut} else if m.TCP {
 		if f,err:=wire.DecodeFrame(m.Payload);err==nil && (f.Kind!=0 || f.DataKind!=0) {queue=c.controlOut}
 	}
 	select {case <-c.stopWrite:return;default:}
-	select {case queue<-responsePacket{p,m}:default:c.dropped.Add(1);c.writeQueueDrops.Add(1)}
+	packet:=responsePacket{p,m}
+	select {case queue<-packet:return;default:}
+	if queue==c.udpOutQueue{select{case <-queue:c.dropped.Add(1);c.writeQueueDrops.Add(1);default:};select{case queue<-packet:return;default:}}
+	c.dropped.Add(1);c.writeQueueDrops.Add(1)
 }
 func (c *Core) write(p Packet,m wire.Message) {
 	if err := c.transport.Write(p, m); err == nil {

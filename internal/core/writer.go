@@ -14,13 +14,13 @@ func(c *Core) writeLoop() {
  defer close(c.writeDone)
  limit:=newPacketPacer(c.Config.ICMPPacketsPerSecond,c.Config.ICMPBurstPackets,time.Now())
  timer:=time.NewTimer(time.Hour);defer timer.Stop()
- controls:=0
+ controls,datagrams:=0,0
  for {
   var packet responsePacket
   found:=false
   if controls<8 {select{case packet=<-c.controlOut:found=true;controls++;default:}}
-  if !found {select{case packet=<-c.dataOut:found=true;controls=0;default:}}
-  if !found {select{case <-c.stopWrite:return;case packet=<-c.controlOut:controls++;case packet=<-c.dataOut:controls=0}}
+  if !found {packet,found=c.nextData(&datagrams);if found{controls=0}}
+  if !found {select{case <-c.stopWrite:return;case packet=<-c.controlOut:controls++;case packet=<-c.udpOutQueue:controls=0;datagrams++;case packet=<-c.dataOut:controls=0;datagrams=0}}
   for {
    delay:=limit.take(time.Now())
    if delay<=0 {break}
@@ -31,6 +31,15 @@ func(c *Core) writeLoop() {
   select{case <-c.stopWrite:return;default:}
   c.write(packet.peer,packet.message)
  }
+}
+
+// Reserve four UDP opportunities per waiting bulk TCP packet. Both remain
+// paced by the same global limit, and control messages keep their reservation.
+func(c *Core)nextData(datagrams *int)(responsePacket,bool){
+ if *datagrams<4{select{case p:=<-c.udpOutQueue:*datagrams++;return p,true;default:}}
+ select{case p:=<-c.dataOut:*datagrams=0;return p,true;default:}
+ select{case p:=<-c.udpOutQueue:*datagrams=4;return p,true;default:}
+ return responsePacket{},false
 }
 
 type packetPacer struct { rate,burst,tokens float64; at time.Time }
