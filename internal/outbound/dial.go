@@ -22,7 +22,7 @@ import (
 
 var ErrResolve = errors.New("target DNS lookup failed")
 var ErrPolicy = errors.New("target denied by outbound policy")
-var ErrUDPUnsupported = errors.New("HTTP CONNECT cannot carry UDP")
+var ErrUDPUnsupported = errors.New("HTTP CONNECT does not support UDP; select SOCKS5")
 
 func SplitTarget(target string) (string, int, error) {
 	h, p, err := net.SplitHostPort(target)
