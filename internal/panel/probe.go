@@ -109,7 +109,9 @@ func echoOnce(ctx context.Context,family,target string) echoResult {
 			filter:=unix.ICMPv6Filter{}
 			for i:=range filter.Data {filter.Data[i]=^uint32(0)}
 			filter.Data[129/32] &^= 1 << (129%32)
-			filterErr=unix.SetsockoptICMPv6Filter(int(fd),unix.IPPROTO_ICMPV6,unix.ICMPV6_FILTER,&filter)
+			// Linux UAPI <linux/icmpv6.h>: ICMPV6_FILTER = 1.
+			// x/sys exposes the typed setter, but not this option constant.
+			filterErr=unix.SetsockoptICMPv6Filter(int(fd),unix.IPPROTO_ICMPV6,1,&filter)
 		} else {filterErr=unix.SetsockoptInt(int(fd),unix.IPPROTO_RAW,1,int(uint32(0xfffffffe)))}
 	})
 	if err!=nil {return echoResult{err:err}};if filterErr!=nil {return echoResult{err:filterErr}}
