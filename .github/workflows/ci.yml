@@ -37,6 +37,8 @@ jobs:
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npm run test:ui
       - run: node scripts/dashboard_visual.cjs
+        env:
+          DASHBOARD_PREVIEW_LOG: ${{ github.ref == 'refs/heads/live-dashboard' && '1' || '0' }}
       - uses: actions/upload-artifact@v7
         if: always()
         with:

@@ -77,7 +77,7 @@ document.querySelectorAll('[data-page]').forEach(n=>n.onclick=()=>selectPage(n.d
 $('hamburger').onclick=()=>{if(matchMedia('(max-width:900px)').matches){const open=document.body.classList.toggle('drawer-open');$('drawer-overlay').hidden=!open;$('hamburger').setAttribute('aria-expanded',String(open));}else{const collapsed=document.body.classList.toggle('sidebar-collapsed');$('hamburger').setAttribute('aria-expanded',String(!collapsed));}};
 $('drawer-overlay').onclick=()=>{document.body.classList.remove('drawer-open');$('drawer-overlay').hidden=true;};
 const formatNumber=n=>Number(n||0).toLocaleString(lang==='fa'?'fa-IR':'en-US',{maximumFractionDigits:1});
-function bytes(value){const n=Number(value||0);const units=['B','KiB','MiB','GiB','TiB'];const i=n>0?Math.min(4,Math.floor(Math.log(n)/Math.log(1024))):0;return formatNumber(n/1024**i)+' '+units[i];}
+function bytes(value){const n=Number(value||0);const units=['B','KiB','MiB','GiB','TiB'];const i=n>0?Math.max(0,Math.min(4,Math.floor(Math.log(n)/Math.log(1024)))):0;return formatNumber(n/1024**i)+' '+units[i];}
 function date(value){return value?new Date(value*1000).toLocaleDateString(lang==='fa'?'fa-IR':'en-GB'):t('never');}
 function progress(value){const bar=el('div','bar'),fill=el('span');fill.style.setProperty('--progress',Math.max(0,Math.min(100,value||0))+'%');bar.append(fill);return bar;}
 function metric(label,value,detail,pct){const card=el('article','card metric'),top=el('div','metric-label');top.append(el('span','',t(label)),symbol('metric-icon',{cpu:'cpu',ram:'memory',storage:'disk',sessions:'route'}[label]));card.append(top,el('div','metric-value',value));card.append(progress(pct),el('div','metric-detail',detail));return card;}

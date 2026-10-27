@@ -41,7 +41,7 @@ async function port(){const s=net.createServer();await new Promise(r=>s.listen(0
    if(bounds.scroll>bounds.width+1||bounds.plotHeight<170||bounds.plotHeight>210||bounds.cardHeight>900||bounds.metrics!==4)throw Error('Invalid dashboard layout '+JSON.stringify(bounds));
    const shot=await call('Page.captureScreenshot',{format:'jpeg',quality:65,captureBeyondViewport:false});fs.writeFileSync(path.join(out,name+'.jpg'),Buffer.from(shot.data,'base64'));
    console.log(name,JSON.stringify(bounds));
-   console.log('DASHBOARD_PREVIEW '+name+' '+shot.data);
+   if(process.env.DASHBOARD_PREVIEW_LOG==='1')console.log('DASHBOARD_PREVIEW '+name+' '+shot.data);
   }
   await capture('dashboard-dark-en',1440,1060);
   await evaluate(`theme='light';preferences()`);await capture('dashboard-light-en',1440,1060);

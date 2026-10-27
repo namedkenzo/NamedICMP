@@ -39,6 +39,8 @@ async function availablePort() { const s=net.createServer(); await new Promise(r
   if(!d.querySelector('[data-i18n="home"]').textContent.includes('داشبورد'))throw Error('Home was not renamed to Dashboard');
   if(!d.querySelector('#live-state-label').textContent.includes('۳۰'))throw Error('Missing explicit live fallback');
   if(d.querySelector('#probe-cards').textContent.includes('0 ms'))throw Error('Unavailable probe displayed a fake ping');
+  if(w.eval('bytes(0.5)').includes('undefined'))throw Error('Sub-byte rate formatting uses an invalid unit');
+  if(d.querySelector('#sparkline path'))throw Error('Disabled core fabricated a traffic series');
   d.querySelector('[data-page="users"]').click();d.querySelector('#add-user').click();if(d.querySelector('select[name="encryption"]').value!=='none')throw new Error('Encryption is not off by default');d.querySelector('input[name="name"]').value='DOM-test-user';submit('#editor-form');
   await wait(()=>!d.querySelector('#editor').hasAttribute('open'));await wait(()=>d.querySelector('#users-body').textContent.includes('DOM-test-user'));
   d.querySelector('#users-body .row-actions button').click();const uri=d.querySelector('#connection-uri').textContent;if(!/^pingtunnel:\/\/203\.0\.113\.25\?lport=1080&mode=vpn&key=\d+$/.test(uri))throw new Error('Incorrect connection URI');d.querySelector('#copy-connection-uri').click();await wait(()=>w.copiedText===uri);d.querySelector('#close-editor').click();

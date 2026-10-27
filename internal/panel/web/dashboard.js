@@ -8,7 +8,7 @@ Object.assign(dictionary.en, {
  ping:'Ping',packetLoss:'Packet loss',jitter:'Jitter',jitterHint:'Mean absolute RTT difference between consecutive successful probes; timeouts break the pair.',
  probeWaiting:'Waiting for first probe',probeDisabled:'ICMP core disabled',probeUnavailable:'Probe unavailable',probeTimeout:'No echo reply',probeOK:'Echo reply received',probeWindow:'Replies / sent',probeRange:'Min / average / max',lastProbe:'Last probe',unknown:'Unavailable',
  payloadHint:'Client upload / download payload. Excludes ICMP headers and TCP retransmissions; not a bandwidth test.',
- networkHint:'All non-loopback interfaces, including other services. Virtual interfaces can count the same packet more than once.',packetHint:'Authenticated tunnel traffic, including transport control packets and retransmissions. Not a packet-loss measurement.',
+ networkHint:'All non-loopback interfaces, including other services. Virtual interfaces can count the same packet more than once.',packetHint:'Core ICMP traffic, including control packets, rejected packets and retransmissions. Not a packet-loss measurement.',
  coreErrors:'Drops & outbound errors',queueHealth:'Queues & pacing',interfaceHealth:'Interface health',hostWide:'HOST-WIDE',
  dropHint:'Core counters since start, not network packet loss. A historical error alone does not mean the current connection is unhealthy.',
  activeFlows:'Active flows',activeUsers:'Active users',flowHint:'TCP / UDP flows, not VPN devices',coreOff:'ICMP off',storageOK:'Usage storage OK',storageError:'Usage storage error',listener:'Listener',notListening:'Not listening',
@@ -26,7 +26,7 @@ Object.assign(dictionary.fa, {
  ping:'پینگ',packetLoss:'افت بسته',jitter:'جیتر',jitterHint:'میانگین اختلاف مطلق RTT پاسخ‌های موفقِ متوالی؛ پس از بی‌پاسخ‌ماندن، جفت جدید آغاز می‌شود.',
  probeWaiting:'در انتظار اولین تست',probeDisabled:'هستهٔ ICMP خاموش است',probeUnavailable:'تست در دسترس نیست',probeTimeout:'بدون پاسخ Echo',probeOK:'پاسخ Echo دریافت شد',probeWindow:'پاسخ / ارسال',probeRange:'کمینه / میانگین / بیشینه',lastProbe:'آخرین تست',unknown:'نامشخص',
  payloadHint:'محتوای آپلود و دانلود از دید کلاینت؛ بدون سربار ICMP و ارسال مجدد TCP. این نمودار تست ظرفیت پهنای باند نیست.',
- networkHint:'همهٔ رابط‌ها جز loopback، شامل سرویس‌های دیگر. رابط‌های مجازی ممکن است یک بسته را چند بار بشمارند.',packetHint:'ترافیک تونل، شامل بسته‌های کنترل و ارسال مجدد؛ این عدد اندازه‌گیری افت بسته نیست.',
+ networkHint:'همهٔ رابط‌ها جز loopback، شامل سرویس‌های دیگر. رابط‌های مجازی ممکن است یک بسته را چند بار بشمارند.',packetHint:'ترافیک ICMP هسته، شامل بسته‌های کنترل، بسته‌های ردشده و ارسال مجدد؛ این عدد اندازه‌گیری افت بسته نیست.',
  coreErrors:'حذف بسته و خطاهای خروجی',queueHealth:'صف‌ها و کنترل نرخ',interfaceHealth:'سلامت رابط شبکه',hostWide:'کل میزبان',
  dropHint:'شمارنده‌های هسته از شروع سرویس، نه افت مسیر شبکه. خطای قدیمی لزوماً به معنی خرابی اتصال فعلی نیست.',
  activeFlows:'جریان‌های فعال',activeUsers:'کاربران فعال',flowHint:'جریان‌های TCP / UDP، نه تعداد دستگاه VPN',coreOff:'ICMP خاموش',storageOK:'ذخیرهٔ مصرف سالم',storageError:'خطا در ذخیرهٔ مصرف',listener:'دریافت ICMP',notListening:'غیرفعال',
@@ -102,7 +102,9 @@ window.namedDashboard = (()=>{
   $('traffic-scope').setAttribute('aria-label',t('trafficMeasurement'));
   if(!points.length&&h.traffic)push(h.traffic);
   const end=points.at(-1)?.at||Date.now(),start=end-300000;
-  const maximum=Math.max(1,...points.flatMap(p=>keys.map(key=>available(p[key])?p[key]:0)))*1.15;
+  const measured=isInterface?h.network_available:!!h.core_enabled;
+  const chartPoints=measured?points:[];
+  const maximum=Math.max(1,...chartPoints.flatMap(p=>keys.map(key=>available(p[key])?p[key]:0)))*1.15;
   const chart=svgNode('svg',{viewBox:'0 0 600 184',preserveAspectRatio:'none','aria-hidden':'true'});
   const defs=svgNode('defs');
   for(let i=0;i<2;i++){const gradient=svgNode('linearGradient',{id:'live-fill-'+i,x1:0,y1:0,x2:0,y2:1});gradient.append(svgNode('stop',{offset:'0%','stop-color':'var(--chart-'+i+')','stop-opacity':'.22'}),svgNode('stop',{offset:'100%','stop-color':'var(--chart-'+i+')','stop-opacity':'0'}));defs.append(gradient);}
@@ -110,11 +112,11 @@ window.namedDashboard = (()=>{
   for(let i=0;i<5;i++)chart.append(svgNode('line',{x1:0,x2:600,y1:8+i*42,y2:8+i*42,class:'chart-grid'}));
   for(let i=0;i<2;i++){
    let segment=[];const segments=[];
-   for(const p of points){if(!available(p[keys[i]])||p.at<start)continue;if(segment.length&&p.at-segment.at(-1).at>2500){segments.push(segment);segment=[];}segment.push(p);}if(segment.length)segments.push(segment);
+   for(const p of chartPoints){if(!available(p[keys[i]])||p.at<start)continue;if(segment.length&&p.at-segment.at(-1).at>2500){segments.push(segment);segment=[];}segment.push(p);}if(segment.length)segments.push(segment);
    for(const group of segments){const coords=group.map(p=>[(p.at-start)/300000*600,176-168*Math.max(0,p[keys[i]])/maximum]);const path=coords.map(([x,y],j)=>(j?'L':'M')+x.toFixed(2)+' '+y.toFixed(2)).join(' ');const [first,last]=[coords[0],coords.at(-1)];if(coords.length>1)chart.append(svgNode('path',{d:path+' L'+last[0]+' 176 L'+first[0]+' 176 Z',fill:'url(#live-fill-'+i+')'}));chart.append(svgNode('path',{d:path,fill:'none',stroke:'var(--chart-'+i+')','stroke-width':2,'vector-effect':'non-scaling-stroke','stroke-linejoin':'round'}),svgNode('circle',{cx:last[0],cy:last[1],r:2.5,fill:'var(--chart-'+i+')'}));}
   }
   $('sparkline').replaceChildren(chart);$('sparkline').setAttribute('aria-label',t('trafficChart')+': '+values.map((v,i)=>t(labels[i])+' '+format(v)).join(', '));
-  $('chart-scale').replaceChildren(...[maximum,maximum/2,0].map(v=>el('span','',isPackets?formatNumber(v):bytes(v)+'/s')));
+  $('chart-scale').replaceChildren(...[maximum,maximum/2,0].map(v=>el('span','',!measured?'—':isPackets?formatNumber(v):bytes(v)+'/s')));
  }
  function render(){
   if(!home)return;
