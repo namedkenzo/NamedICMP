@@ -40,7 +40,7 @@ func cpuTicks() (total, idle uint64) {
 func (s *Stats) sample() {
 	total, idle := cpuTicks()
 	cpu := float64(0)
-	if total > s.total {
+	if total > s.total && idle >= s.idle {
 		cpu = 100 * (1 - float64(idle-s.idle)/float64(total-s.total))
 	}
 	s.total = total
@@ -57,8 +57,10 @@ func (s *Stats) sample() {
 		}
 		f.Close()
 	}
-	var rx, tx uint64
+	var rx, tx, rxErrors, txErrors, rxDrops, txDrops uint64
+	networkAvailable := false
 	if b, err := os.ReadFile("/proc/net/dev"); err == nil {
+		networkAvailable = true
 		for _, line := range strings.Split(string(b), "\n") {
 			v := strings.Fields(strings.ReplaceAll(line, ":", " "))
 			if len(v) < 17 || v[0] == "lo" {
@@ -68,6 +70,9 @@ func (s *Stats) sample() {
 			rx += n
 			n, _ = strconv.ParseUint(v[9], 10, 64)
 			tx += n
+			for _, entry := range []struct { index int; target *uint64 }{{3,&rxErrors},{4,&rxDrops},{11,&txErrors},{12,&txDrops}} {
+				n,_ := strconv.ParseUint(v[entry.index],10,64);*entry.target += n
+			}
 		}
 	}
 	now := time.Now()
@@ -113,6 +118,14 @@ func (s *Stats) sample() {
 	var ms runtime.MemStats
 	runtime.ReadMemStats(&ms)
 	data := map[string]any{"hostname": host, "os": osName, "kernel": strings.TrimSpace(string(kernel)), "architecture": runtime.GOARCH, "cpu_cores": runtime.NumCPU(), "cpu_percent": max(0, min(100, cpu)), "ram_total": mem["MemTotal"], "ram_used": used, "ram_percent": pct, "swap_total": mem["SwapTotal"], "swap_used": mem["SwapTotal"] - min(mem["SwapTotal"], mem["SwapFree"]), "disk_total": diskTotal, "disk_free": diskFree, "uptime_seconds": uptime, "network_rx": rx, "network_tx": tx, "rx_per_second": rxRate, "tx_per_second": txRate, "process_memory": ms.Alloc, "goroutines": runtime.NumGoroutine(), "sampled_at": now.Unix()}
+	data["cpu_available"] = total > 0
+	data["network_available"] = networkAvailable
+	data["interface_rx_errors"],data["interface_tx_errors"] = rxErrors,txErrors
+	data["interface_rx_drops"],data["interface_tx_drops"] = rxDrops,txDrops
+	data["process_rss"] = nil
+	if b,err:=os.ReadFile("/proc/self/statm");err==nil {
+		fields:=strings.Fields(string(b));if len(fields)>1 {if pages,err:=strconv.ParseUint(fields[1],10,64);err==nil {data["process_rss"]=pages*uint64(os.Getpagesize())}}
+	}
 	s.mu.Lock()
 	s.data = data
 	s.mu.Unlock()
@@ -144,3 +157,4 @@ func (s *Stats) Get() map[string]any {
 	}
 	return out
 }
+

@@ -104,6 +104,9 @@ type Core struct {
 	tcpPerUser                                             map[string]int
 	wg                                                     sync.WaitGroup
 	invalid, dropped, received, sent                       atomic.Uint64
+	// Accounted payload excludes ICMP headers and TCP retransmissions.
+	payloadUpload, payloadDownload                         atomic.Uint64
+	activeTCP, activeUDP, activeUsers                       int
 	udpIn, udpOut, tcpIn, tcpOut, dialErrors, oversizedUDP atomic.Uint64
 	decode                                                 *zstd.Decoder
 	stopping                                               bool
@@ -267,11 +270,14 @@ func (c *Core) Handle(ctx context.Context, p Packet) {
 		}
 		s = newSession(ctx, c, key, u, p)
 		c.sessions[key] = s
+		if c.perUser[u.ID] == 0 { c.activeUsers++ }
 		c.perUser[u.ID]++
 		if m.TCP {
+			c.activeTCP++
 			c.tcpPerUser[u.ID]++
 		} else {
 			c.udpPerUser[u.ID]++
+			c.activeUDP++
 		}
 		c.wg.Add(1)
 		go func() {
@@ -280,10 +286,13 @@ func (c *Core) Handle(ctx context.Context, p Packet) {
 			c.mu.Lock()
 			delete(c.sessions, key)
 			c.perUser[u.ID]--
+			if c.perUser[u.ID] == 0 { c.activeUsers-- }
 			if m.TCP {
+				c.activeTCP--
 				c.tcpPerUser[u.ID]--
 			} else {
 				c.udpPerUser[u.ID]--
+				c.activeUDP--
 			}
 			c.mu.Unlock()
 		}()
@@ -348,8 +357,23 @@ func (c *Core) Counts() map[string]int {
 func (c *Core) Metrics() map[string]any {
 	c.mu.Lock()
 	n := len(c.sessions)
+	tcp, udp, users, stopping := c.activeTCP, c.activeUDP, c.activeUsers, c.stopping
 	c.mu.Unlock()
-	return map[string]any{"sessions": n, "packet_reader":c.ReaderMode(),"icmp_families":c.Families(), "tcp_packets_in": c.tcpIn.Load(), "tcp_packets_out": c.tcpOut.Load(), "udp_packets_in": c.udpIn.Load(), "udp_packets_out": c.udpOut.Load(), "outbound_errors": c.dialErrors.Load(), "outbound_dns_errors":c.outboundDNS.Load(),"outbound_policy_errors":c.outboundPolicy.Load(),"outbound_timeouts":c.outboundTimeout.Load(),"outbound_network_errors":c.outboundNetwork.Load(),"outbound_other_errors":c.outboundOther.Load(),"write_queue_dropped":c.writeQueueDrops.Load(),"session_queue_dropped":c.sessionQueueDrops.Load(),"session_limit_rejected":c.sessionLimitDrops.Load(),"socket_write_errors":c.socketWriteErrors.Load(),"icmp_packets_per_second":c.Config.ICMPPacketsPerSecond,"icmp_burst_packets":c.Config.ICMPBurstPackets, "oversized_udp": c.oversizedUDP.Load(), "packets_in": c.received.Load(), "packets_out": c.sent.Load(), "dropped": c.dropped.Load(), "rejected": c.invalid.Load(), "state_healthy": c.Store.Fault() == nil}
+	return map[string]any{
+		"sessions": n, "tcp_sessions": tcp, "udp_sessions": udp, "active_users": users, "running": !stopping,
+		"payload_upload": c.payloadUpload.Load(), "payload_download": c.payloadDownload.Load(),
+		"max_sessions": c.Config.MaxSessions, "max_sessions_per_user": c.Config.MaxPerUser, "max_udp_sessions_per_user": c.Config.MaxUDPPerUser,
+		"control_queue": len(c.controlOut), "control_queue_capacity": cap(c.controlOut),
+		"tcp_queue": len(c.dataOut), "tcp_queue_capacity": cap(c.dataOut),
+		"udp_queue": len(c.udpOutQueue), "udp_queue_capacity": cap(c.udpOutQueue),
+		"packet_reader": c.ReaderMode(), "icmp_families": c.Families(),
+		"tcp_packets_in": c.tcpIn.Load(), "tcp_packets_out": c.tcpOut.Load(), "udp_packets_in": c.udpIn.Load(), "udp_packets_out": c.udpOut.Load(),
+		"outbound_errors": c.dialErrors.Load(), "outbound_dns_errors": c.outboundDNS.Load(), "outbound_policy_errors": c.outboundPolicy.Load(),
+		"outbound_timeouts": c.outboundTimeout.Load(), "outbound_network_errors": c.outboundNetwork.Load(), "outbound_other_errors": c.outboundOther.Load(),
+		"write_queue_dropped": c.writeQueueDrops.Load(), "session_queue_dropped": c.sessionQueueDrops.Load(), "session_limit_rejected": c.sessionLimitDrops.Load(),
+		"socket_write_errors": c.socketWriteErrors.Load(), "icmp_packets_per_second": c.Config.ICMPPacketsPerSecond, "icmp_burst_packets": c.Config.ICMPBurstPackets,
+		"oversized_udp": c.oversizedUDP.Load(), "packets_in": c.received.Load(), "packets_out": c.sent.Load(), "dropped": c.dropped.Load(), "rejected": c.invalid.Load(), "state_healthy": c.Store.Fault() == nil,
+	}
 }
 func (c *Core) Stop() {
 	c.stopOnce.Do(func() {

@@ -12,15 +12,15 @@
 
 **NamedICMP is a web management panel for VPN over ICMP.** It manages users, usage limits, connection profiles and outbounds. Its managed Go tunneling core runs alongside the panel in one systemd service; no separate PingTunnel executable, Node.js runtime or external database is required.
 
-**Windows and Android client apps belong in [NamedClients](https://github.com/namedkenzo/NamedClients).** Client versions and downloads are managed there independently. The initial Android app is available as a debug-signed development APK; it remains alpha.
+**Windows and Android client apps belong in [NamedClients](https://github.com/namedkenzo/NamedClients).** Client versions and downloads are managed there independently; use the [latest combined client release](https://github.com/namedkenzo/NamedClients/releases/latest).
 
 ## Features
 
-- **Connection Settings:** IPv4/IPv6 endpoint selection, IP/domain override, automatic address discovery and an advanced Linux packet-reader option. Outbounds now have their own Settings tab. Home addresses stay masked until tapped. [IPv6 and reader notes](docs/IPV6-READERS.md).
+- **Connection Settings:** IPv4/IPv6 endpoint selection, IP/domain override, automatic address discovery and an advanced Linux packet-reader option. Outbounds have their own Settings tab. Dashboard addresses stay masked until tapped. [IPv6 and reader notes](docs/IPV6-READERS.md).
 
 - **Users:** separate credentials and traffic accounting, quotas, expiry dates and live enable/disable.
 - **Transport:** independent TCP/UDP sessions over ICMPv4 or ICMPv6; direct, SOCKS5 and HTTP CONNECT outbounds.
-- **Dashboard:** English/Persian, system-aware dark/light themes, server metrics and tunnel diagnostics.
+- **Live Network dashboard:** one-second WebSocket updates, five-minute traffic graphs, CPU/RAM, active TCP/UDP flows, queue/error diagnostics and real IPv4/IPv6 echo ping/loss/jitter from the VPS to displayed targets. English/Persian and system-aware dark/light themes. [Measurement scope and health checks](docs/LIVE-DASHBOARD.md).
 - **Management:** interactive installer, optional Certbot HTTPS, backups, health checks and update rollback.
 - **Credentials:** numeric key without encryption, or AES-128-GCM / AES-256-GCM / ChaCha20-Poly1305 with an encryption key.
 
@@ -47,8 +47,8 @@ Create a user in **Users**, open **Config**, then copy the complete connection U
 
 | Client | Where to get it | Notes |
 | --- | --- | --- |
-| **namedP — Windows** | [NamedClients](https://github.com/namedkenzo/NamedClients) · [Downloads](https://github.com/namedkenzo/NamedClients/releases) | Our dedicated app; VPN and SOCKS5 modes; currently alpha |
-| **namedP — Android** | [Android guide](https://github.com/namedkenzo/NamedClients/tree/main/android) · [Development APK](https://github.com/namedkenzo/NamedClients/releases/tag/android-v0.2.0-alpha) | Initial alpha; debug-signed; real-phone/VPS acceptance pending |
+| **namedP — Windows** | [NamedClients](https://github.com/namedkenzo/NamedClients) · [Downloads](https://github.com/namedkenzo/NamedClients/releases/latest) | Dedicated app; installer and portable builds; connection mode follows the profile |
+| **namedP — Android** | [Android guide](https://github.com/namedkenzo/NamedClients/tree/main/android) · [APK](https://github.com/namedkenzo/NamedClients/releases/latest) | Dedicated app; VPN/proxy mode follows the profile |
 | **Original PingTunnel CLI** | [esrrhs/pingtunnel](https://github.com/esrrhs/pingtunnel) · [Releases](https://github.com/esrrhs/pingtunnel/releases) | Upstream command-line client; choose the matching OS build |
 | **Community PingTunnel Client** | [itismoej/pingtunnel-client](https://github.com/itismoej/pingtunnel-client) · [Releases](https://github.com/itismoej/pingtunnel-client/releases) | Android/desktop GUI; linked from the upstream PingTunnel project |
 | **Ping Tunnel — iOS** | [App Store](https://apps.apple.com/us/app/ping-tunnel-vpn-over-icmp/id6748279683) | Check the installed version's supported modes |

@@ -11,7 +11,7 @@
 
 این مخزن مخصوص **وب‌پنل مدیریت VPN over ICMP** است: مدیریت کاربران، حجم و زمان، کانفیگ‌ها و خروجی‌ها. هستهٔ تونلِ مدیریت‌شدهٔ پنل همراه آن در یک سرویس systemd اجرا می‌شود و به اجرای جداگانهٔ PingTunnel، Node.js یا دیتابیس خارجی نیاز ندارد.
 
-کلاینت‌های ویندوز و اندروید در مخزن مستقل **[NamedClients](https://github.com/namedkenzo/NamedClients)** نگهداری می‌شوند. نسخه و دانلود کلاینت‌ها مستقل از پنل است. نسخهٔ اولیهٔ اندروید namedP به‌صورت APK آزمایشی با امضای توسعه موجود است و همچنان آلفاست.
+کلاینت‌های ویندوز و اندروید در مخزن مستقل **[NamedClients](https://github.com/namedkenzo/NamedClients)** نگهداری می‌شوند. نسخه و دانلود کلاینت‌ها مستقل از پنل است؛ از [آخرین ریلیز مشترک کلاینت‌ها](https://github.com/namedkenzo/NamedClients/releases/latest) استفاده کنید.
 
 ## امکانات
 
@@ -20,7 +20,7 @@
 - **کاربران:** کلید و مصرف مستقل، محدودیت حجم، تاریخ انقضا و فعال/غیرفعال‌سازی زنده.
 - **تونل:** جریان‌های جداگانهٔ TCP و UDP روی ICMPv4 یا ICMPv6.
 - **خروجی‌ها:** مستقیم، SOCKS5 برای TCP/UDP و HTTP CONNECT برای TCP.
-- **داشبورد:** فارسی/انگلیسی، تم روشن/تیره مطابق سیستم و نمایش وضعیت سرور و تونل‌ها.
+- **داشبورد شبکهٔ زنده:** آمار یک‌ثانیه‌ای با WebSocket، نمودار ۵ دقیقهٔ اخیر، CPU/RAM، جریان‌های فعال TCP/UDP، وضعیت صف‌ها و خطاها و پینگ/افت بسته/جیتر واقعی از VPS تا مقصد پایش IPv4/IPv6. فارسی/انگلیسی و تم روشن/تیره مطابق سیستم. [راهنمای اندازه‌گیری و سلامت](docs/LIVE-DASHBOARD.md).
 - **مدیریت:** نصب تعاملی، HTTPS اختیاری با Certbot، پشتیبان‌گیری و بازگردانی در صورت شکست آپدیت.
 - **احراز هویت:** رمز عددی بدون رمزنگاری، یا AES-128-GCM، AES-256-GCM و ChaCha20-Poly1305 با کلید رمزنگاری.
 
@@ -47,8 +47,8 @@ bash /tmp/namedicmp-install.sh
 
 | کلاینت | دریافت | توضیح |
 | --- | --- | --- |
-| **namedP ویندوز** | [NamedClients](https://github.com/namedkenzo/NamedClients) · [دانلود](https://github.com/namedkenzo/NamedClients/releases) | کلاینت اختصاصی با VPN و SOCKS5؛ فعلاً آلفا |
-| **namedP اندروید** | [راهنما](https://github.com/namedkenzo/NamedClients/tree/main/android) · [APK آزمایشی](https://github.com/namedkenzo/NamedClients/releases/tag/android-v0.2.0-alpha) | آلفا با امضای توسعه؛ نیازمند تست گوشی و سرور واقعی |
+| **namedP ویندوز** | [NamedClients](https://github.com/namedkenzo/NamedClients) · [دانلود](https://github.com/namedkenzo/NamedClients/releases/latest) | کلاینت اختصاصی؛ نسخهٔ نصب‌شونده و فولدری؛ حالت اتصال طبق کانفیگ |
+| **namedP اندروید** | [راهنما](https://github.com/namedkenzo/NamedClients/tree/main/android) · [APK](https://github.com/namedkenzo/NamedClients/releases/latest) | کلاینت اختصاصی؛ حالت VPN یا پروکسی طبق کانفیگ |
 | **خط فرمان اصلی PingTunnel** | [esrrhs/pingtunnel](https://github.com/esrrhs/pingtunnel) · [Releases](https://github.com/esrrhs/pingtunnel/releases) | کلاینت اصلی؛ فایل مناسب سیستم‌عامل را انتخاب کنید |
 | **رابط گرافیکی جامعهٔ PingTunnel** | [itismoej/pingtunnel-client](https://github.com/itismoej/pingtunnel-client) · [Releases](https://github.com/itismoej/pingtunnel-client/releases) | اندروید و دسکتاپ؛ در پروژهٔ اصلی PingTunnel نیز معرفی شده است |
 | **Ping Tunnel برای iOS** | [App Store](https://apps.apple.com/us/app/ping-tunnel-vpn-over-icmp/id6748279683) | پشتیبانی حالت‌های اتصال را در نسخهٔ نصب‌شده بررسی کنید |

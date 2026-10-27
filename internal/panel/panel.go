@@ -35,6 +35,7 @@ type Panel struct {
 	Core       *core.Core
 	Config     store.Config
 	Stats      *Stats
+	Live       *liveMonitor
 	mu         sync.Mutex
 	sessions   map[string]Session
 	attempts   map[string]attempt
@@ -45,7 +46,9 @@ type Panel struct {
 }
 
 func New(s *store.Store, c *core.Core, conf store.Config) *Panel {
-	return &Panel{Store: s, Core: c, Config: conf, Stats: NewStats(conf.StatePath), sessions: map[string]Session{}, attempts: map[string]attempt{}, loginSlots: make(chan struct{}, 4)}
+	p := &Panel{Store: s, Core: c, Config: conf, Stats: NewStats(conf.StatePath), Live: newLiveMonitor(c != nil), sessions: map[string]Session{}, attempts: map[string]attempt{}, loginSlots: make(chan struct{}, 4)}
+	p.sampleLive(time.Now())
+	return p
 }
 func jsonReply(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -127,7 +130,7 @@ func (p *Panel) Handler() http.Handler {
 			fail(w, 405, "method not allowed")
 			return
 		}
-		if r.URL.Path != "/" && r.URL.Path != "/app.js" && r.URL.Path != "/app.css" && r.URL.Path != "/brand.svg" && r.URL.Path != "/fonts/manrope.woff2" && r.URL.Path != "/fonts/vazirmatn.woff2" {
+		if r.URL.Path != "/" && r.URL.Path != "/app.js" && r.URL.Path != "/dashboard.js" && r.URL.Path != "/app.css" && r.URL.Path != "/brand.svg" && r.URL.Path != "/fonts/manrope.woff2" && r.URL.Path != "/fonts/vazirmatn.woff2" {
 			http.NotFound(w, r)
 			return
 		}
@@ -224,12 +227,14 @@ func (p *Panel) api(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	switch r.URL.Path {
+	case "/api/live":
+		p.live(w,r)
 	case "/api/session":
 		if r.Method != "GET" {
 			fail(w, 405, "method not allowed")
 			return
 		}
-		jsonReply(w, 200, map[string]any{"csrf": s.CSRF, "public_host": p.connectionInfo()["effective_host"], "connection":p.connectionInfo(),"tls": r.TLS != nil, "version": "0.4.2", "protocol": "ICMPv4 / ICMPv6 TCP + UDP"})
+		jsonReply(w, 200, map[string]any{"csrf": s.CSRF, "public_host": p.connectionInfo()["effective_host"], "connection":p.connectionInfo(),"tls": r.TLS != nil, "version": "0.5.0", "protocol": "ICMPv4 / ICMPv6 TCP + UDP"})
 	case "/api/logout":
 		if r.Method != "POST" {
 			fail(w, 405, "method not allowed")
@@ -245,10 +250,7 @@ func (p *Panel) api(w http.ResponseWriter, r *http.Request) {
 			fail(w, 405, "method not allowed")
 			return
 		}
-		m := p.Stats.Get()
-		if p.Core != nil {
-			m["core"] = p.Core.Metrics()
-		}
+		m := p.Live.snapshot()
 		m["users"] = p.Store.UserCount()
 		m["connection"]=p.connectionInfo()
 		jsonReply(w, 200, m)
@@ -423,5 +425,5 @@ func (p *Panel) outbounds(w http.ResponseWriter, r *http.Request) {
 		fail(w, 405, "method not allowed")
 	}
 }
-func (p *Panel) RunStats(ctx context.Context) { p.enableAddressLookup();p.Stats.Run(ctx) }
+func (p *Panel) RunStats(ctx context.Context) { p.enableAddressLookup();p.runLive(ctx) }
 

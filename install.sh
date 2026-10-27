@@ -8,7 +8,7 @@ PREFIX=/opt/namedicmp
 CONFIG=/etc/namedicmp/config.json
 STATE=/var/lib/namedicmp
 GO_VERSION=1.27.3
-MANAGER_VERSION=0.4.2
+MANAGER_VERSION=0.5.0
 INSTALL_MODE="${NAMEDICMP_INSTALL_MODE:-auto}"
 workdir=""
 trap '[[ -z "$workdir" ]] || rm -rf -- "$workdir"' EXIT
