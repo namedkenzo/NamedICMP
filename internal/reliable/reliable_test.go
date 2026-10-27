@@ -6,6 +6,86 @@ import (
 	"time"
 )
 
+func TestQueuedFramesWaitForPhysicalSend(t *testing.T) {
+	r := NewReliable(32, 100*time.Millisecond)
+	now := time.Now()
+	_ = r.Queue(0, []byte("download"))
+	d := r.QueuedDue(now, nil)
+	if len(d) != 1 {
+		t.Fatal("no dispatch")
+	}
+	// Twenty RTOs in a local queue must not create twenty copies, shrink cwnd,
+	// or make NACK processing heap.Fix an item with index -1.
+	r.Input(wire.Frame{Kind: 1, IDs: []int32{0}}, now.Add(time.Second))
+	if len(r.QueuedDue(now.Add(2*time.Second), nil)) != 0 || r.send[0].tries != 0 || r.cwnd != 16 {
+		t.Fatal("queue delay became network loss")
+	}
+	sent := now.Add(2 * time.Second)
+	d[0].Complete(sent, true)
+	r.PollSent(sent)
+	if len(r.QueuedDue(sent.Add(50*time.Millisecond), nil)) != 0 {
+		t.Fatal("RTO started before socket send")
+	}
+	if len(r.QueuedDue(sent.Add(101*time.Millisecond), nil)) != 1 {
+		t.Fatal("real network loss did not retry")
+	}
+}
+func TestQueueRejectionAndEarlyACK(t *testing.T) {
+	r := NewReliable(32, 100*time.Millisecond)
+	now := time.Now()
+	_ = r.Queue(0, []byte("abc"))
+	d := r.QueuedDue(now, nil)[0]
+	r.Input(wire.Frame{Kind: 2, IDs: []int32{0}}, now)
+	if r.Empty() {
+		t.Fatal("ACK of untransmitted frame trusted")
+	}
+	d.Complete(now, false)
+	r.PollSent(now)
+	if r.send[0].tries != 0 || r.cwnd != 16 || r.Empty() {
+		t.Fatal("local admission failure counted as network loss")
+	}
+	d = r.QueuedDue(now.Add(101*time.Millisecond), nil)[0]
+	r.Input(wire.Frame{Kind: 2, IDs: []int32{0}}, now.Add(102*time.Millisecond))
+	d.Complete(now.Add(101*time.Millisecond), true)
+	r.PollSent(now.Add(103 * time.Millisecond))
+	if !r.Empty() || r.AcknowledgedBytes() != 3 {
+		t.Fatal("fast ACK lost before writer completion")
+	}
+}
+func TestDispatchCompletionConcurrentWithOwner(t *testing.T) {
+	r := NewReliable(32, 100*time.Millisecond)
+	now := time.Now()
+	_ = r.Queue(0, []byte("x"))
+	d := r.QueuedDue(now, nil)[0]
+	done := make(chan struct{})
+	go func() { d.Complete(now, true); d.Complete(now, false); close(done) }()
+	for i := 0; i < 100; i++ {
+		r.PollSent(now)
+	}
+	<-done
+	r.PollSent(now)
+	r.Input(wire.Frame{Kind: 2, IDs: []int32{0}}, now.Add(time.Millisecond))
+	if !r.Empty() {
+		t.Fatal("completion lost")
+	}
+}
+
+func TestOriginalACKWhileRetryWaitsInWriter(t *testing.T) {
+	r := NewReliable(32, 100*time.Millisecond)
+	now := time.Now()
+	_ = r.Queue(0, []byte("abc"))
+	first := r.QueuedDue(now, nil)[0]
+	first.Complete(now, true)
+	r.PollSent(now)
+	retry := r.QueuedDue(now.Add(101*time.Millisecond), nil)[0]
+	r.Input(wire.Frame{Kind: 2, IDs: []int32{0}}, now.Add(102*time.Millisecond))
+	retry.Complete(now.Add(103*time.Millisecond), true)
+	r.PollSent(now.Add(104*time.Millisecond))
+	if !r.Empty() || r.AcknowledgedBytes() != 3 || len(r.QueuedDue(now.Add(time.Second), nil)) != 0 {
+		t.Fatal("late retry completion resurrected acknowledged data")
+	}
+}
+
 func TestOrderingDedupAndWrap(t *testing.T) {
 	r := NewReliable(32, 100*time.Millisecond)
 	now := time.Now()
@@ -145,4 +225,3 @@ func TestUnsentFrameCannotBeAcknowledged(t *testing.T) {
 		t.Fatal("early ACK discarded queued data")
 	}
 }
-

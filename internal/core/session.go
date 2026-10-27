@@ -205,14 +205,29 @@ func (s *session) tcp(conn net.Conn) {
 	closeQueued := false
 	lastActivity, lastHB := time.Now(), time.Now()
 	closeAt := time.Time{}
+	sentWake := make(chan struct{}, 1)
+	wake := func() {
+		select {
+		case sentWake <- struct{}{}:
+		default:
+		}
+	}
+	var lastAcknowledged uint64
 	timer := time.NewTimer(time.Hour)
 	defer timer.Stop()
 	for {
 		now := time.Now()
+		r.PollSent(now)
+		if n := r.AcknowledgedBytes(); n > lastAcknowledged {
+			lastAcknowledged = n
+			lastActivity = now
+		}
 		if !connected && now.Sub(lastActivity) > 10*time.Second {
+			s.core.tcpHandshakeTimeout.Add(1)
 			return
 		}
 		if now.Sub(lastActivity) > s.timeout {
+			s.core.tcpIdleTimeout.Add(1)
 			return
 		}
 		for len(pendingOutput) > 0 && r.Space() > 0 {
@@ -241,7 +256,8 @@ func (s *session) tcp(conn net.Conn) {
 			closeQueued = true
 			closeAt = now
 		}
-		if closeQueued && (remoteClose && r.Empty() || now.Sub(closeAt) > 30*time.Second) {
+		if tcpDrainComplete(closeQueued, remoteClose, r.Empty(), now.Sub(closeAt)) {
+			s.core.tcpCompleted.Add(1)
 			return
 		}
 		reservedSlot := 0
@@ -252,8 +268,8 @@ func (s *session) tcp(conn net.Conn) {
 			_ = r.Queue(4, nil)
 			lastHB = now
 		}
-		for _, f := range r.Due(now) {
-			s.frame(f)
+		for _, dispatch := range r.QueuedDue(now, wake) {
+			s.core.replyTracked(s.peer, wire.Message{Connection: s.peer.Message.Connection, Key: s.user.Key, ReplyType: -1, Payload: wire.EncodeFrame(dispatch.Frame)}, dispatch.Complete)
 		}
 		wake := min(r.Next(now), time.Second)
 		if !timer.Stop() {
@@ -267,12 +283,14 @@ func (s *session) tcp(conn net.Conn) {
 		case <-s.ctx.Done():
 			return
 		case <-timer.C:
+		case <-sentWake:
 		case p := <-s.in:
 			if !s.updatePeer(p) {
 				continue
 			}
 			f, err := wire.DecodeFrame(p.Message.Payload)
 			if err != nil {
+				s.core.tcpDecodeErrors.Add(1)
 				return
 			}
 			if f.Kind == 0 && len(f.Data) > wire.PayloadSize {
@@ -304,6 +322,7 @@ func (s *session) tcp(conn net.Conn) {
 					}
 					conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
 					if err := writeTCP(conn, v.Data); err != nil {
+						s.core.tcpWriteErrors.Add(1)
 						return
 					}
 					conn.SetWriteDeadline(time.Time{})
@@ -344,6 +363,11 @@ func (s *session) tcp(conn net.Conn) {
 			}
 		}
 	}
+}
+
+// An EOF is not permission to discard queued/unacknowledged download data.
+func tcpDrainComplete(queued, remote, empty bool, elapsed time.Duration) bool {
+	return queued && empty && (remote || elapsed > 30*time.Second)
 }
 func writeTCP(c net.Conn, b []byte) error {
 	for len(b) > 0 {
