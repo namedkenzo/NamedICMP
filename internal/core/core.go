@@ -121,6 +121,7 @@ type Core struct {
 	// Accounted payload excludes ICMP headers and TCP retransmissions.
 	payloadUpload, payloadDownload                                               atomic.Uint64
 	activeTCP, activeUDP, activeUsers                                            int
+	tcpIdleTimeout, tcpHandshakeTimeout, tcpDecodeErrors, tcpWriteErrors, tcpCompleted atomic.Uint64
 	udpIn, udpOut, tcpIn, tcpOut, dialErrors, oversizedUDP                       atomic.Uint64
 	decode                                                                       *zstd.Decoder
 	stopping                                                                     bool
@@ -202,14 +203,26 @@ func (c *Core) Serve(ctx context.Context) error {
 		}
 	}()
 	defer close(done)
+	var retryDelay time.Duration
+	var lastRetryNotice time.Time
 	for {
 		p, err := c.transport.Read()
 		if err != nil {
 			if ctx.Err() != nil {
 				return nil
 			}
-			return err
+			if transientReceiveError(err) {
+				if receiveErrorNotice(&lastRetryNotice) {
+					log.Printf("temporary ICMP receive failure; retrying with bounded backoff: %v", err)
+				}
+				if !waitReceiveRetry(ctx.Done(), &retryDelay) {
+					return nil
+				}
+				continue
+			}
+			return fmt.Errorf("ICMP receive failed: %w", err)
 		}
+		retryDelay = 0
 		c.Handle(ctx, p)
 	}
 }
@@ -324,6 +337,9 @@ func (c *Core) Handle(ctx context.Context, p Packet) {
 	}
 }
 func (c *Core) reply(p Packet, m wire.Message) {
+	c.replyTracked(p,m,nil)
+}
+func (c *Core) replyTracked(p Packet,m wire.Message,complete func(time.Time,bool)) {
 	m.TCP = p.Message.TCP
 	queue := c.dataOut
 	if m.Kind == 0 && !m.TCP {
@@ -338,10 +354,11 @@ func (c *Core) reply(p Packet, m wire.Message) {
 	}
 	select {
 	case <-c.stopWrite:
+		if complete!=nil {complete(time.Now(),false)}
 		return
 	default:
 	}
-	packet := responsePacket{p, m}
+	packet := responsePacket{p, m,complete}
 	select {
 	case queue <- packet:
 		return
@@ -362,8 +379,9 @@ func (c *Core) reply(p Packet, m wire.Message) {
 	}
 	c.dropped.Add(1)
 	c.writeQueueDrops.Add(1)
+	if complete!=nil {complete(time.Now(),false)}
 }
-func (c *Core) write(p Packet, m wire.Message) {
+func (c *Core) write(p Packet, m wire.Message) bool {
 	if err := c.transport.Write(p, m); err == nil {
 		c.sent.Add(1)
 		if m.Kind == 0 {
@@ -373,9 +391,11 @@ func (c *Core) write(p Packet, m wire.Message) {
 				c.udpOut.Add(1)
 			}
 		}
+		return true
 	} else {
 		c.dropped.Add(1)
 		c.socketWriteErrors.Add(1)
+		return false
 	}
 }
 func (c *Core) kick(p Packet) {
@@ -404,7 +424,10 @@ func (c *Core) Metrics() map[string]any {
 	n := len(c.sessions)
 	tcp, udp, users, stopping := c.activeTCP, c.activeUDP, c.activeUsers, c.stopping
 	c.mu.Unlock()
+	var receiveRetries uint64
+	if t,ok:=c.transport.(interface{ReceiveRetries()uint64});ok{receiveRetries=t.ReceiveRetries()}
 	return map[string]any{
+		"receive_retries":receiveRetries,"tcp_idle_timeouts":c.tcpIdleTimeout.Load(),"tcp_handshake_timeouts":c.tcpHandshakeTimeout.Load(),"tcp_decode_errors":c.tcpDecodeErrors.Load(),"tcp_write_errors":c.tcpWriteErrors.Load(),"tcp_completed":c.tcpCompleted.Load(),
 		"sessions": n, "tcp_sessions": tcp, "udp_sessions": udp, "active_users": users, "running": !stopping,
 		"payload_upload": c.payloadUpload.Load(), "payload_download": c.payloadDownload.Load(),
 		"max_sessions": c.Config.MaxSessions, "max_sessions_per_user": c.Config.MaxPerUser, "max_udp_sessions_per_user": c.Config.MaxUDPPerUser,

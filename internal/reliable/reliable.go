@@ -4,6 +4,7 @@ import (
 	"container/heap"
 	"errors"
 	"namedicmp/internal/wire"
+	"sync/atomic"
 	"time"
 )
 
@@ -16,6 +17,22 @@ type pending struct {
 	index  int
 	fast   bool
 	serial uint64
+	dispatch *Dispatch
+	earlyACK bool
+}
+
+type sendOutcome struct { at time.Time; ok bool }
+
+// Dispatch separates local queue residence from time spent on the network.
+// Only Complete is called by the writer; all Reliable state remains owned by
+// the session goroutine. A queued frame cannot acquire duplicate retry tickets.
+type Dispatch struct {
+	Frame wire.Frame
+	result atomic.Pointer[sendOutcome]
+	wake func()
+}
+func (d *Dispatch) Complete(at time.Time, ok bool) {
+	if d.result.CompareAndSwap(nil, &sendOutcome{at,ok}) && d.wake != nil { d.wake() }
 }
 type deadlineHeap []*pending
 
@@ -51,6 +68,8 @@ type Reliable struct {
 	deadlines          deadlineHeap
 	lastLoss           time.Time
 	nextSerial         uint64
+	queued map[int32]*pending
+	acknowledgedBytes uint64
 }
 
 func NewReliable(window int, rto time.Duration) *Reliable {
@@ -84,6 +103,7 @@ func (r *Reliable) Queue(kind int32, data []byte) error {
 // Input acknowledges stored frames, deduplicates, and delivers only contiguous
 // frames. Buffer bounds and ID ring checks prevent unbounded peer allocations.
 func (r *Reliable) Input(f wire.Frame, now time.Time) (controls, delivered []wire.Frame) {
+	r.PollSent(now)
 	switch f.Kind {
 	case 0:
 		d := distance(f.ID, r.nextRecv)
@@ -128,7 +148,7 @@ func (r *Reliable) Input(f wire.Frame, now time.Time) (controls, delivered []wir
 		}
 	case 1:
 		for _, id := range f.IDs {
-			if p := r.send[id]; p != nil && !p.acked && now.Sub(p.sent) > 20*time.Millisecond {
+			if p := r.send[id]; p != nil && !p.acked && p.index>=0 && now.Sub(p.sent) > 20*time.Millisecond {
 				p.due = now
 				p.fast = true
 				heap.Fix(&r.deadlines, p.index)
@@ -136,28 +156,12 @@ func (r *Reliable) Input(f wire.Frame, now time.Time) (controls, delivered []wir
 		}
 	case 2:
 		for _, id := range f.IDs {
+			if p:=r.send[id];p!=nil&&p.tries==0&&p.dispatch!=nil {p.earlyACK=true;continue}
 			if p := r.send[id]; p != nil && !p.acked && p.tries > 0 {
-				p.acked = true
-				if p.index >= 0 {
-					heap.Remove(&r.deadlines, p.index)
-				}
-				if p.tries == 1 {
-					sample := now.Sub(p.sent) * 2
-					r.rto = max(100*time.Millisecond, min(2*time.Second, (r.rto*7+sample)/8))
-				}
-				if r.cwnd < r.window {
-					r.cwnd++
-				}
+				r.acknowledge(p,now)
 			}
 		}
-		for len(r.order) > 0 {
-			p := r.send[r.order[0]]
-			if !p.acked {
-				break
-			}
-			delete(r.send, r.order[0])
-			r.order = r.order[1:]
-		}
+		r.slide()
 	case 3:
 		controls = append(controls, wire.Frame{Kind: 4, Time: f.Time})
 	case 4: // RTT sampling uses unambiguous ACKs; peer wall clocks are not trusted.
@@ -196,4 +200,49 @@ func (r *Reliable) Next(now time.Time) time.Duration {
 	return max(0, r.deadlines[0].due.Sub(now))
 }
 func (r *Reliable) Empty() bool { return len(r.order) == 0 }
+
+func (r *Reliable) AcknowledgedBytes() uint64 {return r.acknowledgedBytes}
+
+func(r *Reliable)acknowledge(p *pending,now time.Time){
+	if p.acked{return};p.acked=true
+	if p.frame.DataKind==0 {r.acknowledgedBytes+=uint64(len(p.frame.Data))}
+	delete(r.queued,p.frame.ID)
+	if p.index>=0 {heap.Remove(&r.deadlines,p.index)}
+	if p.tries==1&&p.dispatch==nil {sample:=max(0,now.Sub(p.sent))*2;r.rto=max(100*time.Millisecond,min(2*time.Second,(r.rto*7+sample)/8))}
+	if r.cwnd<r.window {r.cwnd++}
+}
+func(r *Reliable)slide(){for len(r.order)>0 {p:=r.send[r.order[0]];if !p.acked {break};delete(r.send,r.order[0]);r.order=r.order[1:]}}
+
+// QueuedDue is the asynchronous-writer equivalent of Due. Failed local
+// admission does not count as network loss or reduce the congestion window.
+func (r *Reliable) QueuedDue(now time.Time, wake func()) []*Dispatch {
+	r.PollSent(now)
+	if r.queued==nil {r.queued=make(map[int32]*pending)}
+	var out []*Dispatch
+	for len(r.deadlines)>0 && !r.deadlines[0].due.After(now) {
+		p:=heap.Pop(&r.deadlines).(*pending)
+		f:=p.frame; f.Time=now.UnixNano();f.Resend=p.tries>0
+		d:=&Dispatch{Frame:f,wake:wake};p.dispatch=d;r.queued[f.ID]=p
+		out=append(out,d)
+	}
+	return out
+}
+
+func (r *Reliable) PollSent(now time.Time) {
+	for id,p:=range r.queued {
+		outcome:=p.dispatch.result.Load();if outcome==nil {continue}
+		delete(r.queued,id);p.dispatch=nil
+		if p.acked {continue}
+		if !outcome.ok {
+			p.earlyACK=false;p.due=now.Add(100*time.Millisecond)
+			heap.Push(&r.deadlines,p);continue
+		}
+		if p.tries>0&&!p.fast&&outcome.at.Sub(r.lastLoss)>=r.rto {r.cwnd=max(8,r.cwnd/2);r.lastLoss=outcome.at}
+		p.tries++;p.sent=outcome.at;p.fast=false
+		p.due=outcome.at.Add(min(r.rto*time.Duration(1<<min(p.tries-1,4)),5*time.Second))
+		heap.Push(&r.deadlines,p)
+		if p.earlyACK {p.earlyACK=false;r.acknowledge(p,now)}
+	}
+	r.slide()
+}
 

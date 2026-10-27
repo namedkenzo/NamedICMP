@@ -5,7 +5,7 @@ import (
  "namedicmp/internal/wire"
 )
 
-type responsePacket struct { peer Packet; message wire.Message }
+type responsePacket struct { peer Packet; message wire.Message; complete func(time.Time,bool) }
 
 // One bounded writer prevents a busy data flow from blocking the receive loop.
 // ACK/handshake/probe messages have a reserved queue; eight control packets are
@@ -29,7 +29,9 @@ func(c *Core) writeLoop() {
    select{case <-c.stopWrite:return;case <-timer.C:}
   }
   select{case <-c.stopWrite:return;default:}
-  c.write(packet.peer,packet.message)
+  sentAt:=time.Now()
+  ok:=c.write(packet.peer,packet.message)
+  if packet.complete!=nil {packet.complete(sentAt,ok)}
  }
 }
 

@@ -234,7 +234,7 @@ func (p *Panel) api(w http.ResponseWriter, r *http.Request) {
 			fail(w, 405, "method not allowed")
 			return
 		}
-		jsonReply(w, 200, map[string]any{"csrf": s.CSRF, "public_host": p.connectionInfo()["effective_host"], "connection": p.connectionInfo(), "tls": r.TLS != nil, "version": "0.5.0", "protocol": "ICMPv4 / ICMPv6 TCP + UDP"})
+		jsonReply(w, 200, map[string]any{"csrf": s.CSRF, "public_host": p.connectionInfo()["effective_host"], "connection": p.connectionInfo(), "tls": r.TLS != nil, "version": "0.5.1", "protocol": "ICMPv4 / ICMPv6 TCP + UDP"})
 	case "/api/logout":
 		if r.Method != "POST" {
 			fail(w, 405, "method not allowed")
