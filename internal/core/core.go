@@ -119,20 +119,20 @@ type Core struct {
 	wg                               sync.WaitGroup
 	invalid, dropped, received, sent atomic.Uint64
 	// Accounted payload excludes ICMP headers and TCP retransmissions.
-	payloadUpload, payloadDownload                                               atomic.Uint64
-	activeTCP, activeUDP, activeUsers                                            int
+	payloadUpload, payloadDownload                                                     atomic.Uint64
+	activeTCP, activeUDP, activeUsers                                                  int
 	tcpIdleTimeout, tcpHandshakeTimeout, tcpDecodeErrors, tcpWriteErrors, tcpCompleted atomic.Uint64
-	udpIn, udpOut, tcpIn, tcpOut, dialErrors, oversizedUDP                       atomic.Uint64
-	decode                                                                       *zstd.Decoder
-	stopping                                                                     bool
-	controlOut, dataOut, udpOutQueue                                             chan responsePacket
-	writeDone, stopWrite                                                         chan struct{}
-	writeQueueDrops, sessionQueueDrops, sessionLimitDrops, socketWriteErrors     atomic.Uint64
-	outboundDNS, outboundPolicy, outboundTimeout, outboundNetwork, outboundOther atomic.Uint64
-	stopOnce                                                                     sync.Once
-	credentialsMu                                                                sync.Mutex
-	pingMu                                                                       sync.Mutex
-	pingBuckets                                                                  map[string]*bucket
+	udpIn, udpOut, tcpIn, tcpOut, dialErrors, oversizedUDP                             atomic.Uint64
+	decode                                                                             *zstd.Decoder
+	stopping                                                                           bool
+	controlOut, dataOut, udpOutQueue                                                   chan responsePacket
+	writeDone, stopWrite                                                               chan struct{}
+	writeQueueDrops, sessionQueueDrops, sessionLimitDrops, socketWriteErrors           atomic.Uint64
+	outboundDNS, outboundPolicy, outboundTimeout, outboundNetwork, outboundOther       atomic.Uint64
+	stopOnce                                                                           sync.Once
+	credentialsMu                                                                      sync.Mutex
+	pingMu                                                                             sync.Mutex
+	pingBuckets                                                                        map[string]*bucket
 }
 type bucket struct {
 	tokens float64
@@ -337,9 +337,9 @@ func (c *Core) Handle(ctx context.Context, p Packet) {
 	}
 }
 func (c *Core) reply(p Packet, m wire.Message) {
-	c.replyTracked(p,m,nil)
+	c.replyTracked(p, m, nil)
 }
-func (c *Core) replyTracked(p Packet,m wire.Message,complete func(time.Time,bool)) {
+func (c *Core) replyTracked(p Packet, m wire.Message, complete func(time.Time, bool)) {
 	m.TCP = p.Message.TCP
 	queue := c.dataOut
 	if m.Kind == 0 && !m.TCP {
@@ -354,11 +354,13 @@ func (c *Core) replyTracked(p Packet,m wire.Message,complete func(time.Time,bool
 	}
 	select {
 	case <-c.stopWrite:
-		if complete!=nil {complete(time.Now(),false)}
+		if complete != nil {
+			complete(time.Now(), false)
+		}
 		return
 	default:
 	}
-	packet := responsePacket{p, m,complete}
+	packet := responsePacket{p, m, complete}
 	select {
 	case queue <- packet:
 		return
@@ -379,7 +381,9 @@ func (c *Core) replyTracked(p Packet,m wire.Message,complete func(time.Time,bool
 	}
 	c.dropped.Add(1)
 	c.writeQueueDrops.Add(1)
-	if complete!=nil {complete(time.Now(),false)}
+	if complete != nil {
+		complete(time.Now(), false)
+	}
 }
 func (c *Core) write(p Packet, m wire.Message) bool {
 	if err := c.transport.Write(p, m); err == nil {
@@ -425,9 +429,11 @@ func (c *Core) Metrics() map[string]any {
 	tcp, udp, users, stopping := c.activeTCP, c.activeUDP, c.activeUsers, c.stopping
 	c.mu.Unlock()
 	var receiveRetries uint64
-	if t,ok:=c.transport.(interface{ReceiveRetries()uint64});ok{receiveRetries=t.ReceiveRetries()}
+	if t, ok := c.transport.(interface{ ReceiveRetries() uint64 }); ok {
+		receiveRetries = t.ReceiveRetries()
+	}
 	return map[string]any{
-		"receive_retries":receiveRetries,"tcp_idle_timeouts":c.tcpIdleTimeout.Load(),"tcp_handshake_timeouts":c.tcpHandshakeTimeout.Load(),"tcp_decode_errors":c.tcpDecodeErrors.Load(),"tcp_write_errors":c.tcpWriteErrors.Load(),"tcp_completed":c.tcpCompleted.Load(),
+		"receive_retries": receiveRetries, "tcp_idle_timeouts": c.tcpIdleTimeout.Load(), "tcp_handshake_timeouts": c.tcpHandshakeTimeout.Load(), "tcp_decode_errors": c.tcpDecodeErrors.Load(), "tcp_write_errors": c.tcpWriteErrors.Load(), "tcp_completed": c.tcpCompleted.Load(),
 		"sessions": n, "tcp_sessions": tcp, "udp_sessions": udp, "active_users": users, "running": !stopping,
 		"payload_upload": c.payloadUpload.Load(), "payload_download": c.payloadDownload.Load(),
 		"max_sessions": c.Config.MaxSessions, "max_sessions_per_user": c.Config.MaxPerUser, "max_udp_sessions_per_user": c.Config.MaxUDPPerUser,

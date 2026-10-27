@@ -59,6 +59,7 @@ func TestDownloadOnlyParallelFlowsSurvivePacingAndLoss(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			const flowCount = 8
 			const payloadSize = 96 * 1024
+			started := time.Now()
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 			db, err := store.Open(filepath.Join(t.TempDir(), "state.json"))
@@ -246,14 +247,15 @@ func TestDownloadOnlyParallelFlowsSurvivePacingAndLoss(t *testing.T) {
 						case 4:
 						default:
 							t.Fatal("unexpected download stream control")
-							}
 						}
 					}
 				}
+			}
 			if probeReplies == 0 || transport.lostPackets.Load() == 0 || transport.retransmits.Load() == 0 {
 				t.Fatal("test did not exercise probes, loss and retransmission")
 			}
 			actual, _ := db.GetUser(user.ID)
+			t.Logf("download-only: duration=%s packets=%d retransmissions=%d simulated_loss=%d", time.Since(started), transport.dataPackets.Load(), transport.retransmits.Load(), transport.lostPackets.Load())
 			if actual.Upload != 0 || actual.Download != flowCount*payloadSize {
 				t.Fatalf("download-only accounting is incorrect: upload=%d download=%d", actual.Upload, actual.Download)
 			}

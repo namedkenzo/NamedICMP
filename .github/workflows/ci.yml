@@ -13,12 +13,23 @@ jobs:
         with:
           go-version: '1.27.3'
       - run: go mod verify
-      - name: Format stability changes for verification
+      - name: Check stability Go formatting
         run: |
           files=(internal/core/{core,session,writer,dual_transport,receive,receive_test,download_load_test,drain_test}.go internal/reliable/{reliable,reliable_test}.go)
-          gofmt -w "${files[@]}"
-          node -e 'const f=require("fs"),z=require("zlib");console.log("STABILITY_FORMAT "+z.gzipSync(Buffer.from(JSON.stringify(Object.fromEntries(process.argv.slice(1).map(p=>[p,f.readFileSync(p,"utf8")]))))).toString("base64"))' "${files[@]}"
+          test -z "$(gofmt -l "${files[@]}")"
       - run: go test -race ./...
+      - name: Repeat paced lossy download regression
+        run: go test ./internal/core -run 'TestDownloadOnlyParallelFlows|TestDispatchTimerStarts' -count=3 -v
+      - name: Compare the same download harness against v0.5.0
+        run: |
+          git fetch --depth=1 origin f9553eb6ec81db99a697489641ee0510131936eb
+          baseline_dir=$(mktemp -d /tmp/namedicmp-baseline.XXXXXX)
+          git archive f9553eb6ec81db99a697489641ee0510131936eb | tar -x -C "$baseline_dir"
+          cp internal/core/download_load_test.go "$baseline_dir/internal/core/download_load_test.go"
+          set +e
+          (cd "$baseline_dir" && go test ./internal/core -run '^TestDownloadOnlyParallelFlowsSurvivePacingAndLoss$' -count=1 -v)
+          baseline_result=$?
+          echo "Baseline v0.5.0 regression exit=$baseline_result (comparison only, not the new-code test gate)."
       - run: go vet ./...
       - name: Exercise real ICMPv4 and ICMPv6 echo filters on loopback
         run: |
