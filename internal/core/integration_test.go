@@ -141,6 +141,10 @@ func TestStreamLossCompressionAndExactAccounting(t *testing.T) {
 	if got.Upload != int64(len(expected)) || got.Download != int64(len(expected)) {
 		t.Fatalf("wrong retransmission/compression usage %+v", got)
 	}
+	metrics := c.Metrics()
+	if metrics["payload_upload"] != uint64(len(expected)) || metrics["payload_download"] != uint64(len(expected)) || metrics["tcp_sessions"] != 1 || metrics["active_users"] != 1 {
+		t.Fatalf("dashboard payload/flow counters disagree with exact accounting: %+v", metrics)
+	}
 }
 func (m *mockTransport) Close() error { m.once.Do(func() { close(m.done) }); return nil }
 func TestTCPUserIsolationAndDuplicateAccounting(t *testing.T) {

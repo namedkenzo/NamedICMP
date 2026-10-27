@@ -15,6 +15,15 @@ jobs:
       - run: go mod verify
       - run: go test -race ./...
       - run: go vet ./...
+      - name: Exercise real ICMPv4 and ICMPv6 echo filters on loopback
+        run: |
+          go test -c -o /tmp/namedicmp-panel.test ./internal/panel
+          sudo /tmp/namedicmp-panel.test -test.run '^TestEchoLoopback$' -test.v
+      - name: Check Go formatting
+        run: |
+          files=(internal/panel/{panel,stats,monitor,live,probe,health,monitor_test}.go internal/core/{core,session,integration_test}.go)
+          gofmt -d "${files[@]}"
+          test -z "$(gofmt -l "${files[@]}")"
       - run: bash scripts/test_installer.sh
       - run: bash scripts/test_update.sh
       - run: python3 scripts/test_uninstall.py
@@ -23,9 +32,20 @@ jobs:
       - run: bash scripts/test_uninstall_systemd.sh
       - run: python3 scripts/test_network_tuning.py
       - run: node --check internal/panel/web/app.js
+      - run: node --check internal/panel/web/dashboard.js
       - run: node scripts/test_versions.cjs
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npm run test:ui
+      - run: node scripts/dashboard_visual.cjs
+        env:
+          DASHBOARD_PREVIEW_LOG: ${{ github.ref == 'refs/heads/live-dashboard' && '1' || '0' }}
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: dashboard-previews
+          path: /tmp/namedicmp-dashboard-previews/*.jpg
+          if-no-files-found: ignore
+          retention-days: 7
       - run: go test ./internal/wire -fuzz=FuzzDecode -fuzztime=15s -parallel=2
       - run: go test ./internal/wire -fuzz=FuzzEncryptedDecoder -fuzztime=15s -parallel=2
       - run: CGO_ENABLED=0 go build -buildvcs=false -trimpath -o /tmp/namedicmp ./cmd/namedicmp

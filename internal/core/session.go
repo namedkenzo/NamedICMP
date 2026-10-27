@@ -139,6 +139,7 @@ func (s *session) udp(c *outbound.UDP) {
 			if err := c.Write(p.Message.Payload); err != nil {
 				return
 			}
+			s.core.payloadUpload.Add(uint64(len(p.Message.Payload)))
 			reset()
 		case r := <-results:
 			if r.err != nil {
@@ -153,6 +154,7 @@ func (s *session) udp(c *outbound.UDP) {
 				return
 			}
 			s.message(r.data, s.peer.Message.Target)
+			s.core.payloadDownload.Add(uint64(len(r.data)))
 			reset()
 		}
 	}
@@ -223,6 +225,7 @@ func (s *session) tcp(conn net.Conn) {
 				return
 			}
 			pendingOutput = pendingOutput[size:]
+			s.core.payloadDownload.Add(uint64(size))
 			lastActivity = now
 		}
 		if len(pendingOutput) == 0 {
@@ -304,6 +307,7 @@ func (s *session) tcp(conn net.Conn) {
 						return
 					}
 					conn.SetWriteDeadline(time.Time{})
+					s.core.payloadUpload.Add(uint64(len(v.Data)))
 					lastActivity = time.Now()
 				case 1:
 					if !connected {
@@ -354,4 +358,3 @@ func writeTCP(c net.Conn, b []byte) error {
 	}
 	return nil
 }
-
