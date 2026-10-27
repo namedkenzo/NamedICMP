@@ -22,7 +22,7 @@ async function availablePort() { const s=net.createServer(); await new Promise(r
   let stderr='';server.stderr.on('data',b=>stderr+=b.toString());
   await wait(async()=>{if(server.exitCode!==null)throw new Error(stderr);try{return (await fetch(url)).ok;}catch{return false;}});
   const jar=new CookieJar(),errors=[],consoleEvents=new VirtualConsole();consoleEvents.on('jsdomError',e=>errors.push(e.message));
-  dom=await JSDOM.fromURL(url,{resources:'usable',runScripts:'dangerously',cookieJar:jar,virtualConsole:consoleEvents,beforeParse(w){
+  dom=await JSDOM.fromURL(url,{resources:'usable',runScripts:'dangerously',pretendToBeVisual:true,cookieJar:jar,virtualConsole:consoleEvents,beforeParse(w){
    // WebSocket auth, revocation and flow control are exercised by Go tests.
    // This DOM pass checks the explicit unavailable/fallback presentation.
    w.WebSocket=undefined;

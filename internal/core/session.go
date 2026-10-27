@@ -358,4 +358,3 @@ func writeTCP(c net.Conn, b []byte) error {
 	}
 	return nil
 }
-

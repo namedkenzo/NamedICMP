@@ -22,8 +22,8 @@ jobs:
       - name: Check Go formatting
         run: |
           files=(internal/panel/{panel,stats,monitor,live,probe,health,monitor_test}.go internal/core/{core,session,integration_test}.go)
-          gofmt -w "${files[@]}"
-          node -e 'const fs=require("fs"),z=require("zlib");console.log("FORMATTED_SOURCE "+z.gzipSync(Buffer.from(JSON.stringify(Object.fromEntries(process.argv.slice(1).map(p=>[p,fs.readFileSync(p,"utf8")]))))).toString("base64"))' "${files[@]}"
+          gofmt -d "${files[@]}"
+          test -z "$(gofmt -l "${files[@]}")"
       - run: bash scripts/test_installer.sh
       - run: bash scripts/test_update.sh
       - run: python3 scripts/test_uninstall.py
@@ -41,7 +41,7 @@ jobs:
         if: always()
         with:
           name: dashboard-previews
-          path: /tmp/namedicmp-dashboard-previews/*.png
+          path: /tmp/namedicmp-dashboard-previews/*.jpg
           if-no-files-found: ignore
           retention-days: 7
       - run: go test ./internal/wire -fuzz=FuzzDecode -fuzztime=15s -parallel=2

@@ -38,12 +38,15 @@ type RawTransport struct {
 	c        *net.IPConn
 	buffer   []byte
 	security *wire.Security
-	family int
+	family   int
 }
 
-func ListenRaw(address string) (*RawTransport, error) { return listenRawFamily(address,4) }
-func listenRawFamily(address string,family int) (*RawTransport, error) {
-	network,protocol:="ip4","ip4:icmp";if family==6 {network,protocol="ip6","ip6:ipv6-icmp"}
+func ListenRaw(address string) (*RawTransport, error) { return listenRawFamily(address, 4) }
+func listenRawFamily(address string, family int) (*RawTransport, error) {
+	network, protocol := "ip4", "ip4:icmp"
+	if family == 6 {
+		network, protocol = "ip6", "ip6:ipv6-icmp"
+	}
 	addr, err := net.ResolveIPAddr(network, address)
 	if err != nil {
 		return nil, err
@@ -54,7 +57,7 @@ func listenRawFamily(address string,family int) (*RawTransport, error) {
 	}
 	c.SetReadBuffer(4 << 20)
 	c.SetWriteBuffer(4 << 20)
-	return &RawTransport{c: c, buffer: make([]byte, 65535), security: wire.NewSecurity(),family:family}, nil
+	return &RawTransport{c: c, buffer: make([]byte, 65535), security: wire.NewSecurity(), family: family}, nil
 }
 func (r *RawTransport) Read() (Packet, error) {
 	b := r.buffer
@@ -63,7 +66,10 @@ func (r *RawTransport) Read() (Packet, error) {
 		if err != nil {
 			return Packet{}, err
 		}
-		decode:=wire.DecodeEcho;if r.family==6 {decode=wire.DecodeEcho6}
+		decode := wire.DecodeEcho
+		if r.family == 6 {
+			decode = wire.DecodeEcho6
+		}
 		_, id, seq, p, err := decode(b[:n])
 		if err != nil {
 			continue
@@ -75,7 +81,7 @@ func (r *RawTransport) Read() (Packet, error) {
 		if mode == "none" {
 			m.Payload = append([]byte(nil), m.Payload...)
 		} // encrypted plaintext already owns its buffer
-		return Packet{Source: addr.IP.String(), Family:r.family,EchoID: id, EchoSeq: seq, Message: m, Encryption: mode}, nil
+		return Packet{Source: addr.IP.String(), Family: r.family, EchoID: id, EchoSeq: seq, Message: m, Encryption: mode}, nil
 	}
 }
 func (r *RawTransport) Write(p Packet, m wire.Message) error {
@@ -84,9 +90,17 @@ func (r *RawTransport) Write(p Packet, m wire.Message) error {
 		return err
 	}
 	b := wire.Echo(byte(p.Message.ReplyType), p.EchoID, p.EchoSeq, payload)
-	if r.family==6 {typ:=byte(129);if p.Message.ReplyType==8 {typ=128};b=wire.Echo6(typ,p.EchoID,p.EchoSeq,payload)}
+	if r.family == 6 {
+		typ := byte(129)
+		if p.Message.ReplyType == 8 {
+			typ = 128
+		}
+		b = wire.Echo6(typ, p.EchoID, p.EchoSeq, payload)
+	}
 	// This socket has one writer, so this deadline cannot affect another send.
-	if err:=r.c.SetWriteDeadline(time.Now().Add(200*time.Millisecond));err!=nil{return err}
+	if err := r.c.SetWriteDeadline(time.Now().Add(200 * time.Millisecond)); err != nil {
+		return err
+	}
 	_, err = r.c.WriteToIP(b, &net.IPAddr{IP: net.ParseIP(p.Source)})
 	return err
 }
@@ -94,30 +108,30 @@ func (r *RawTransport) Close() error                             { return r.c.Cl
 func (r *RawTransport) SetCredentials(c []wire.Credential) error { return r.security.SetCredentials(c) }
 
 type Core struct {
-	Store                                                  *store.Store
-	Config                                                 store.Config
-	transport                                              Transport
-	mu                                                     sync.Mutex
-	sessions                                               map[sessionKey]*session
-	perUser                                                map[string]int
-	udpPerUser                                             map[string]int
-	tcpPerUser                                             map[string]int
-	wg                                                     sync.WaitGroup
-	invalid, dropped, received, sent                       atomic.Uint64
+	Store                            *store.Store
+	Config                           store.Config
+	transport                        Transport
+	mu                               sync.Mutex
+	sessions                         map[sessionKey]*session
+	perUser                          map[string]int
+	udpPerUser                       map[string]int
+	tcpPerUser                       map[string]int
+	wg                               sync.WaitGroup
+	invalid, dropped, received, sent atomic.Uint64
 	// Accounted payload excludes ICMP headers and TCP retransmissions.
-	payloadUpload, payloadDownload                         atomic.Uint64
-	activeTCP, activeUDP, activeUsers                       int
-	udpIn, udpOut, tcpIn, tcpOut, dialErrors, oversizedUDP atomic.Uint64
-	decode                                                 *zstd.Decoder
-	stopping                                               bool
-	controlOut, dataOut, udpOutQueue chan responsePacket
-	writeDone, stopWrite chan struct{}
-	writeQueueDrops, sessionQueueDrops, sessionLimitDrops, socketWriteErrors atomic.Uint64
+	payloadUpload, payloadDownload                                               atomic.Uint64
+	activeTCP, activeUDP, activeUsers                                            int
+	udpIn, udpOut, tcpIn, tcpOut, dialErrors, oversizedUDP                       atomic.Uint64
+	decode                                                                       *zstd.Decoder
+	stopping                                                                     bool
+	controlOut, dataOut, udpOutQueue                                             chan responsePacket
+	writeDone, stopWrite                                                         chan struct{}
+	writeQueueDrops, sessionQueueDrops, sessionLimitDrops, socketWriteErrors     atomic.Uint64
 	outboundDNS, outboundPolicy, outboundTimeout, outboundNetwork, outboundOther atomic.Uint64
-	stopOnce                                               sync.Once
-	credentialsMu                                          sync.Mutex
-	pingMu                                                 sync.Mutex
-	pingBuckets                                            map[string]*bucket
+	stopOnce                                                                     sync.Once
+	credentialsMu                                                                sync.Mutex
+	pingMu                                                                       sync.Mutex
+	pingBuckets                                                                  map[string]*bucket
 }
 type bucket struct {
 	tokens float64
@@ -129,7 +143,7 @@ func New(s *store.Store, c store.Config, t Transport) (*Core, error) {
 	if err != nil {
 		return nil, err
 	}
-	core := &Core{Store: s, Config: c, transport: t, sessions: map[sessionKey]*session{}, perUser: map[string]int{}, udpPerUser: map[string]int{}, tcpPerUser: map[string]int{}, decode: d, pingBuckets: map[string]*bucket{}, controlOut:make(chan responsePacket,256),dataOut:make(chan responsePacket,2048),udpOutQueue:make(chan responsePacket,64),writeDone:make(chan struct{}),stopWrite:make(chan struct{})}
+	core := &Core{Store: s, Config: c, transport: t, sessions: map[sessionKey]*session{}, perUser: map[string]int{}, udpPerUser: map[string]int{}, tcpPerUser: map[string]int{}, decode: d, pingBuckets: map[string]*bucket{}, controlOut: make(chan responsePacket, 256), dataOut: make(chan responsePacket, 2048), udpOutQueue: make(chan responsePacket, 64), writeDone: make(chan struct{}), stopWrite: make(chan struct{})}
 	if err := core.RefreshCredentials(); err != nil {
 		d.Close()
 		return nil, err
@@ -270,7 +284,9 @@ func (c *Core) Handle(ctx context.Context, p Packet) {
 		}
 		s = newSession(ctx, c, key, u, p)
 		c.sessions[key] = s
-		if c.perUser[u.ID] == 0 { c.activeUsers++ }
+		if c.perUser[u.ID] == 0 {
+			c.activeUsers++
+		}
 		c.perUser[u.ID]++
 		if m.TCP {
 			c.activeTCP++
@@ -286,7 +302,9 @@ func (c *Core) Handle(ctx context.Context, p Packet) {
 			c.mu.Lock()
 			delete(c.sessions, key)
 			c.perUser[u.ID]--
-			if c.perUser[u.ID] == 0 { c.activeUsers-- }
+			if c.perUser[u.ID] == 0 {
+				c.activeUsers--
+			}
 			if m.TCP {
 				c.activeTCP--
 				c.tcpPerUser[u.ID]--
@@ -307,18 +325,45 @@ func (c *Core) Handle(ctx context.Context, p Packet) {
 }
 func (c *Core) reply(p Packet, m wire.Message) {
 	m.TCP = p.Message.TCP
-	queue:=c.dataOut
-	if m.Kind==0&&!m.TCP{queue=c.udpOutQueue}
-	if m.Kind!=0 {queue=c.controlOut} else if m.TCP {
-		if f,err:=wire.DecodeFrame(m.Payload);err==nil && (f.Kind!=0 || f.DataKind!=0) {queue=c.controlOut}
+	queue := c.dataOut
+	if m.Kind == 0 && !m.TCP {
+		queue = c.udpOutQueue
 	}
-	select {case <-c.stopWrite:return;default:}
-	packet:=responsePacket{p,m}
-	select {case queue<-packet:return;default:}
-	if queue==c.udpOutQueue{select{case <-queue:c.dropped.Add(1);c.writeQueueDrops.Add(1);default:};select{case queue<-packet:return;default:}}
-	c.dropped.Add(1);c.writeQueueDrops.Add(1)
+	if m.Kind != 0 {
+		queue = c.controlOut
+	} else if m.TCP {
+		if f, err := wire.DecodeFrame(m.Payload); err == nil && (f.Kind != 0 || f.DataKind != 0) {
+			queue = c.controlOut
+		}
+	}
+	select {
+	case <-c.stopWrite:
+		return
+	default:
+	}
+	packet := responsePacket{p, m}
+	select {
+	case queue <- packet:
+		return
+	default:
+	}
+	if queue == c.udpOutQueue {
+		select {
+		case <-queue:
+			c.dropped.Add(1)
+			c.writeQueueDrops.Add(1)
+		default:
+		}
+		select {
+		case queue <- packet:
+			return
+		default:
+		}
+	}
+	c.dropped.Add(1)
+	c.writeQueueDrops.Add(1)
 }
-func (c *Core) write(p Packet,m wire.Message) {
+func (c *Core) write(p Packet, m wire.Message) {
 	if err := c.transport.Write(p, m); err == nil {
 		c.sent.Add(1)
 		if m.Kind == 0 {
@@ -420,4 +465,3 @@ func (c *Core) Maintain(ctx context.Context) {
 		}
 	}
 }
-

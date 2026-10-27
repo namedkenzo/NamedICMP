@@ -6,6 +6,14 @@
 - Keep monitoring shared and bounded; pause hidden views, revoke logged-out streams and label missing/stale data.
 - Preserve tunnel protocol, client applications and installed user/settings data.
 
+# 0.5.0 — 2026-10-27
+
+- Rename Home to Dashboard and stream real one-second measurements over authenticated WebSocket.
+- Add five-minute payload/interface/packet charts and IPv4/IPv6 path RTT, loss and jitter with explicit measurement scope.
+- Surface active TCP/UDP flows, queue pressure, pacing, storage health, outbound/drop reasons and kernel/interface diagnostics.
+- Keep monitoring shared and bounded; pause hidden views, revoke logged-out streams and label missing/stale data.
+- Preserve tunnel protocol, client applications and installed user/settings data.
+
 # 0.3.0 — 2026-10-24
 
 - Promote the server and web panel to a stable release, published as Latest.
