@@ -58,7 +58,7 @@ window.namedDashboard = (()=>{
   if(socket||retry)return;
   if(typeof WebSocket!=='function'){liveState('liveUnsupported');return;}
   liveState(failures?'liveReconnecting':'liveConnecting');
-  const ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/api/live');socket=ws;
+  let ws;try{ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/api/live');}catch{liveState('liveUnsupported');return;}socket=ws;
   const connectionStarted=Date.now();
   watch=setInterval(()=>{if(Date.now()-Math.max(connectionStarted,lastReceived)>5000){liveState('liveStale');ws.close();}},2000);
   ws.onmessage=event=>{
@@ -87,7 +87,7 @@ window.namedDashboard = (()=>{
    for(const [label,value]of [['ping',ms(p.rtt_ms)],['packetLoss',available(p.loss_percent)?number(p.loss_percent)+'%':'—'],['jitter',ms(p.jitter_ms)]]){const box=el('div');box.append(el('span','',t(label)),el('strong','',value));if(label==='jitter')box.title=t('jitterHint');values.append(box);}
    const detail=el('div','probe-detail');detail.append(el('span','',t('probeWindow')+': '+number(p.received)+' / '+number(p.sent)),el('span','',t('lastProbe')+': '+clock(p.last_at)));
    const range=el('div','probe-range',t('probeRange')+': '+[p.minimum_ms,p.average_ms,p.maximum_ms].map(ms).join(' / '));
-   card.append(values,detail,range);return card;
+   card.append(values,detail,range);if(p.error)card.append(el('p','probe-error',p.error));return card;
   }));
  }
  function renderChart(h){

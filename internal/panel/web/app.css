@@ -23,7 +23,7 @@ html[data-theme=light] .dashboard{--chart-0:#237e6b;--chart-1:#785ac0}
 .dashboard .rate-value{font-size:clamp(19px,2.2vw,29px);font-variant-numeric:tabular-nums;white-space:nowrap}
 .traffic-plot{display:flex;gap:12px;direction:ltr;margin-top:30px}
 .chart-scale{display:flex;flex-direction:column;justify-content:space-between;width:70px;flex-shrink:0;color:var(--muted);font-size:9px;white-space:nowrap;padding-block:0 8px;font-variant-numeric:tabular-nums}
-.dashboard .sparkline{height:184px;flex:1;min-width:0;margin:0;overflow:hidden;background:none}
+.dashboard .sparkline{height:184px;flex:1;min-width:0;margin:0;padding:0;display:block;overflow:hidden;background:none;border:0}
 .dashboard .sparkline svg{display:block;width:100%;height:184px;overflow:visible}
 .chart-grid{stroke:var(--line-soft);stroke-width:1;stroke-dasharray:3 5;vector-effect:non-scaling-stroke}
 .chart-timeline{display:flex;justify-content:space-between;gap:12px;direction:ltr;color:var(--muted);font-size:10px;margin:12px 0 22px;padding-inline-start:82px}
@@ -39,13 +39,14 @@ html[data-theme=light] .dashboard{--chart-0:#237e6b;--chart-1:#785ac0}
 html[dir=rtl] .probe-values strong{text-align:right}
 .probe-detail{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;font-size:9px;color:var(--muted);margin-top:14px}
 .probe-range{font-size:9px;color:var(--muted);margin-top:8px;line-height:1.8}
+.probe-error{font-size:10px;color:var(--muted);overflow-wrap:anywhere;direction:ltr;margin-top:8px;line-height:1.7}
 .path-card>.small-text{font-size:10px;line-height:1.8;margin-bottom:0}
 .dashboard-health-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;margin-bottom:20px}
 .diagnostic-card{padding:23px;min-width:0}.diagnostic-card>.card-heading{margin-bottom:22px}
 .diagnostic-list{margin:0}
 .diagnostic-list>div{display:flex;justify-content:space-between;gap:16px;border-bottom:1px solid var(--line-soft);padding:9px 0;font-size:11px;align-items:baseline}
 .diagnostic-list>div:last-child{border-bottom:0}
-.diagnostic-list dt{color:var(--muted);overflow-wrap:anywhere;min-width:0}
+.dashboard .diagnostic-list dt{color:var(--muted);overflow-wrap:anywhere;min-width:0;flex-shrink:1}
 .diagnostic-list dd{margin:0;text-align:end;font-variant-numeric:tabular-nums;direction:ltr;overflow-wrap:anywhere;flex-shrink:0;max-width:60%}
 .diagnostic-card>.small-text{font-size:10px;line-height:1.8;margin-bottom:0}
 .queue-meter{margin:18px 0}.queue-meter>div:first-child{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);gap:12px;margin-bottom:8px}
