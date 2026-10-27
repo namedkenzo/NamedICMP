@@ -3,7 +3,7 @@ module namedicmp
 go 1.26.0
 
 require (
-	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674
+	github.com/gorilla/websocket v1.5.3
 	github.com/klauspost/compress v1.20.3
 )
 
