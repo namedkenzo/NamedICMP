@@ -80,7 +80,7 @@ func TestOriginalACKWhileRetryWaitsInWriter(t *testing.T) {
 	retry := r.QueuedDue(now.Add(101*time.Millisecond), nil)[0]
 	r.Input(wire.Frame{Kind: 2, IDs: []int32{0}}, now.Add(102*time.Millisecond))
 	retry.Complete(now.Add(103*time.Millisecond), true)
-	r.PollSent(now.Add(104*time.Millisecond))
+	r.PollSent(now.Add(104 * time.Millisecond))
 	if !r.Empty() || r.AcknowledgedBytes() != 3 || len(r.QueuedDue(now.Add(time.Second), nil)) != 0 {
 		t.Fatal("late retry completion resurrected acknowledged data")
 	}

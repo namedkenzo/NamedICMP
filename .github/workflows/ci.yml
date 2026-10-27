@@ -16,6 +16,7 @@ jobs:
       - name: Check stability Go formatting
         run: |
           files=(internal/core/{core,session,writer,dual_transport,receive,receive_test,download_load_test,drain_test}.go internal/reliable/{reliable,reliable_test}.go)
+          gofmt -d "${files[@]}"
           test -z "$(gofmt -l "${files[@]}")"
       - run: go test -race ./...
       - name: Repeat paced lossy download regression
