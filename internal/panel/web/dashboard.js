@@ -18,6 +18,7 @@ Object.assign(dictionary.en, {
  globalFlowRejects:'Global flow-cap rejects',tcpUserRejects:'Per-user TCP rejects',udpUserRejects:'Per-user UDP rejects',stoppingRejects:'Shutdown rejects',
  busiestTCP:'Busiest user · TCP / limit',busiestUDP:'Busiest user · UDP / limit',udpIdleTimeouts:'UDP idle expirations',udpReadErrors:'UDP outbound read errors',udpWriteErrors:'UDP outbound write errors',
  pressureDetails:'Detailed queue & capacity reasons',
+ obsoleteQueued:'Obsolete queued sends avoided',
  rxTotal:'Interface received',txTotal:'Interface sent',rxErrors:'RX errors',txErrors:'TX errors',rxDrops:'RX drops',txDrops:'TX drops',
  kernelDiagnostics:'Kernel ICMP counters & read-only network settings',kernelHint:'Host-wide totals since boot. These are not tunnel-only statistics. No firewall or sysctl setting is changed by this dashboard.',networkSettings:'Network settings',
  heapMemory:'Go heap allocated',processMemory:'Process resident memory',goroutines:'Go routines',fileDescriptors:'Open file descriptors',swap:'Swap used',packetsSecond:'packets/s',trafficMeasurement:'Traffic measurement',trafficChart:'Live traffic chart',refreshAt:'Sampled',
@@ -40,6 +41,7 @@ Object.assign(dictionary.fa, {
  globalFlowRejects:'رد به‌دلیل سقف کل جریان‌ها',tcpUserRejects:'رد به‌دلیل سقف TCP کاربر',udpUserRejects:'رد به‌دلیل سقف UDP کاربر',stoppingRejects:'رد هنگام توقف هسته',
  busiestTCP:'بیشترین TCP یک کاربر / سقف',busiestUDP:'بیشترین UDP یک کاربر / سقف',udpIdleTimeouts:'انقضای UDP غیرفعال',udpReadErrors:'خطای خواندن خروجی UDP',udpWriteErrors:'خطای نوشتن خروجی UDP',
  pressureDetails:'جزئیات علت‌های فشار صف و ظرفیت',
+ obsoleteQueued:'ارسال‌های منقضی‌شدهٔ کنارگذاشته‌شده',
  rxTotal:'کل دریافت رابط',txTotal:'کل ارسال رابط',rxErrors:'خطای دریافت',txErrors:'خطای ارسال',rxDrops:'حذف در دریافت',txDrops:'حذف در ارسال',
  kernelDiagnostics:'شمارنده‌های ICMP کرنل و تنظیمات فقط‌خواندنی شبکه',kernelHint:'آمار کل میزبان از زمان روشن‌شدن؛ منحصر به تونل نیست. داشبورد هیچ تنظیم فایروال یا sysctl را تغییر نمی‌دهد.',networkSettings:'تنظیمات شبکه',
  heapMemory:'حافظهٔ تخصیص‌یافتهٔ Go',processMemory:'حافظهٔ مقیم فرایند',goroutines:'روتین‌های Go',fileDescriptors:'فایل‌های باز',swap:'مصرف Swap',packetsSecond:'بسته/ثانیه',trafficMeasurement:'نوع اندازه‌گیری ترافیک',trafficChart:'نمودار زندهٔ ترافیک',refreshAt:'زمان نمونه',
@@ -142,6 +144,7 @@ window.namedDashboard = (()=>{
    ['queueDrops',number(k.write_queue_dropped)],['sessionDrops',number(k.session_queue_dropped)],['sessionLimits',number(k.session_limit_rejected)]
   ]);
   rows('pressure-info',[
+   ['obsoleteQueued',number(k.obsolete_queued_packets)],
    ['tcpQueueRetries',number(k.tcp_queue_retries)],['controlQueueDrops',number(k.control_queue_dropped)],['udpQueueEvicted',number(k.udp_queue_evicted)],['udpQueueRejected',number(k.udp_queue_rejected)],
    ['globalFlowRejects',number(k.session_limit_global)],['tcpUserRejects',number(k.session_limit_tcp_user)],['udpUserRejects',number(k.session_limit_udp_user)],['stoppingRejects',number(k.session_limit_stopping)],
    ['udpIdleTimeouts',number(k.udp_idle_timeouts)],['udpReadErrors',number(k.udp_read_errors)],['udpWriteErrors',number(k.udp_write_errors)]

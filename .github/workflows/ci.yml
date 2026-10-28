@@ -15,10 +15,25 @@ jobs:
       - run: go mod verify
       - name: Check stability Go formatting
         run: |
-          files=(internal/core/{core,session,writer,dual_transport,receive,receive_test,download_load_test,drain_test,capacity,capacity_test,admission_stale_test}.go internal/reliable/{reliable,reliable_test}.go)
+          files=(internal/core/{core,session,writer,dual_transport,receive,receive_test,download_load_test,drain_test,capacity,capacity_test,admission_stale_test,obsolete_test}.go internal/reliable/{reliable,reliable_test}.go internal/outbound/{dial,handshake,handshake_test}.go)
           gofmt -d "${files[@]}"
           test -z "$(gofmt -l "${files[@]}")"
       - run: go test -race ./...
+      - name: Verify proxy regressions fail on v0.5.2
+        run: |
+          git fetch --depth=1 origin 5ba2d83da75dd587df358daade696187a15b52d6
+          baseline_dir=$(mktemp -d /tmp/namedicmp-proxy-baseline.XXXXXX)
+          git archive 5ba2d83da75dd587df358daade696187a15b52d6 | tar -x -C "$baseline_dir"
+          cp internal/outbound/handshake_test.go "$baseline_dir/internal/outbound/handshake_test.go"
+          cp internal/outbound/handshake.go "$baseline_dir/internal/outbound/handshake.go"
+          set +e
+          (cd "$baseline_dir" && go test ./internal/outbound -run 'TestProxyHandshakeCancellation|TestHTTPConnectSuccessStatuses' -count=1 -v) >"$baseline_dir/result.log" 2>&1
+          baseline_result=$?
+          set -e
+          cat "$baseline_dir/result.log"
+          test "$baseline_result" -ne 0
+          grep -q 'canceled proxy handshake retained its connection' "$baseline_dir/result.log"
+          grep -q 'valid CONNECT 2xx rejected' "$baseline_dir/result.log"
       - name: Repeat paced lossy download regression
         run: go test ./internal/core -run 'TestDownloadOnlyParallelFlows|TestDispatchTimerStarts' -count=3 -v
       - name: Verify admission regression fails on v0.5.1

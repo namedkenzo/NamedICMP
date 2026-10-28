@@ -242,14 +242,14 @@ func DialTCP(ctx context.Context, o store.Outbound, target string, allowPrivate 
 			c.Close()
 		}
 	}()
-	c.SetDeadline(time.Now().Add(10 * time.Second))
+	err = proxyHandshake(ctx, c, func(context.Context) error {
 	switch o.Kind {
 	case "socks5":
 		if err = socksAuth(c, o); err != nil {
-			return nil, err
+			return err
 		}
 		if _, err = socksRequest(c, 1, numeric); err != nil {
-			return nil, err
+			return err
 		}
 	case "http":
 		request := "CONNECT " + numeric + " HTTP/1.1\r\nHost: " + numeric + "\r\n"
@@ -258,26 +258,30 @@ func DialTCP(ctx context.Context, o store.Outbound, target string, allowPrivate 
 		}
 		request += "\r\n"
 		if err = writeAll(c, []byte(request)); err != nil {
-			return nil, err
+			return err
 		}
 		r := bufio.NewReaderSize(c, 8192)
 		line, e := limitedLine(r)
 		if e != nil {
-			return nil, e
+			return e
 		}
 		parts := strings.Fields(line)
-		if len(parts) < 2 || (parts[0] != "HTTP/1.1" && parts[0] != "HTTP/1.0") || parts[1] != "200" {
-			return nil, errors.New("HTTP CONNECT rejected")
+		status := 0
+		if len(parts) >= 2 && len(parts[1]) == 3 {
+			status, _ = strconv.Atoi(parts[1])
+		}
+		if len(parts) < 2 || (parts[0] != "HTTP/1.1" && parts[0] != "HTTP/1.0") || status < 200 || status >= 300 {
+			return errors.New("HTTP CONNECT rejected")
 		}
 		size := len(line)
 		for {
 			line, e = limitedLine(r)
 			if e != nil {
-				return nil, e
+				return e
 			}
 			size += len(line)
 			if size > 16384 {
-				return nil, errors.New("proxy headers too large")
+				return errors.New("proxy headers too large")
 			}
 			if line == "\r\n" || line == "\n" {
 				break
@@ -285,9 +289,13 @@ func DialTCP(ctx context.Context, o store.Outbound, target string, allowPrivate 
 		}
 		c = &bufferedConn{Conn: c, r: r}
 	default:
-		return nil, errors.New("unsupported outbound")
+		return errors.New("unsupported outbound")
 	}
-	c.SetDeadline(time.Time{})
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
 	ok = true
 	return c, nil
 }
@@ -337,31 +345,36 @@ func DialUDP(ctx context.Context, o store.Outbound, target string, allowPrivate 
 			c.Close()
 		}
 	}()
-	c.SetDeadline(time.Now().Add(10 * time.Second))
-	if err = socksAuth(c, o); err != nil {
-		return nil, err
-	}
-	relay, err := socksRequest(c, 3, "0.0.0.0:1")
+	var uc *net.UDPConn
+	err = proxyHandshake(ctx, c, func(handshakeCtx context.Context) error {
+		if err := socksAuth(c, o); err != nil {
+			return err
+		}
+		relay, err := socksRequest(c, 3, "0.0.0.0:1")
+		if err != nil {
+			return err
+		}
+		host, port, err := net.SplitHostPort(relay)
+		if err != nil {
+			return err
+		}
+		if ip := net.ParseIP(host); ip != nil && ip.IsUnspecified() {
+			host, _, _ = net.SplitHostPort(c.RemoteAddr().String())
+			relay = net.JoinHostPort(host, port)
+		}
+		conn, err := (&net.Dialer{}).DialContext(handshakeCtx, "udp", relay)
+		if err != nil {
+			return err
+		}
+		uc = conn.(*net.UDPConn)
+		return nil
+	})
 	if err != nil {
+		if uc != nil {
+			uc.Close()
+		}
 		return nil, err
 	}
-	host, p, err := net.SplitHostPort(relay)
-	if err != nil {
-		return nil, err
-	}
-	if ip := net.ParseIP(host); ip != nil && ip.IsUnspecified() {
-		host, _, _ = net.SplitHostPort(c.RemoteAddr().String())
-		relay = net.JoinHostPort(host, p)
-	}
-	addr, err := net.ResolveUDPAddr("udp", relay)
-	if err != nil {
-		return nil, err
-	}
-	uc, err := net.DialUDP("udp", nil, addr)
-	if err != nil {
-		return nil, err
-	}
-	c.SetDeadline(time.Time{})
 	header, _ := Address(numeric)
 	u := &UDP{conn: uc, control: c, relay: true, target: numeric, valid: ips, port: port, header: append([]byte{0, 0, 0}, header...)}
 	ok = true

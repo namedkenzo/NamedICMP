@@ -11,6 +11,7 @@ import (
 
 	"github.com/klauspost/compress/zstd"
 	"namedicmp/internal/outbound"
+	"namedicmp/internal/reliable"
 	"namedicmp/internal/store"
 	"namedicmp/internal/wire"
 )
@@ -129,6 +130,7 @@ type Core struct {
 	writeDone, stopWrite                                                               chan struct{}
 	writeQueueDrops, sessionQueueDrops, sessionLimitDrops, socketWriteErrors           atomic.Uint64
 	queueReasons
+	obsoleteQueued atomic.Uint64
 	capacityReasons
 	udpIdleTimeout, udpReadErrors, udpWriteErrors                                atomic.Uint64
 	outboundDNS, outboundPolicy, outboundTimeout, outboundNetwork, outboundOther atomic.Uint64
@@ -338,6 +340,9 @@ func (c *Core) reply(p Packet, m wire.Message) {
 	c.replyTracked(p, m, nil)
 }
 func (c *Core) replyTracked(p Packet, m wire.Message, complete func(time.Time, bool)) {
+	c.replyQueued(p, m, complete, nil)
+}
+func (c *Core) replyQueued(p Packet, m wire.Message, complete func(time.Time, bool), dispatch *reliable.Dispatch) {
 	m.TCP = p.Message.TCP
 	queue := c.dataOut
 	if m.Kind == 0 && !m.TCP {
@@ -358,7 +363,7 @@ func (c *Core) replyTracked(p Packet, m wire.Message, complete func(time.Time, b
 		return
 	default:
 	}
-	packet := responsePacket{p, m, complete}
+	packet := responsePacket{peer: p, message: m, complete: complete, dispatch: dispatch}
 	select {
 	case queue <- packet:
 		return
@@ -452,6 +457,7 @@ func (c *Core) Metrics() map[string]any {
 		receiveRetries = t.ReceiveRetries()
 	}
 	return map[string]any{
+		"obsolete_queued_packets": c.obsoleteQueued.Load(),
 		"receive_retries": receiveRetries, "tcp_idle_timeouts": c.tcpIdleTimeout.Load(), "tcp_handshake_timeouts": c.tcpHandshakeTimeout.Load(), "tcp_decode_errors": c.tcpDecodeErrors.Load(), "tcp_write_errors": c.tcpWriteErrors.Load(), "tcp_completed": c.tcpCompleted.Load(),
 		"sessions": n, "tcp_sessions": tcp, "udp_sessions": udp, "active_users": users, "running": !stopping,
 		"busiest_user_tcp_sessions": maxTCP, "busiest_user_udp_sessions": maxUDP,

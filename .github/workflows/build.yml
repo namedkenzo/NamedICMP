@@ -2,7 +2,7 @@ name: Build Linux archives
 on:
   workflow_dispatch:
   push:
-    branches: [main, ipv6-settings, fix-ipv6-uninstall, gaming-latency, live-dashboard, fix-speedtest, fix-capacity-evidence]
+    branches: [main, ipv6-settings, fix-ipv6-uninstall, gaming-latency, live-dashboard, fix-speedtest, fix-capacity-evidence, maintenance-053]
     tags: ['v*']
 permissions:
   contents: write

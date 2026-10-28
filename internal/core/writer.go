@@ -1,6 +1,7 @@
 package core
 
 import (
+	"namedicmp/internal/reliable"
 	"namedicmp/internal/wire"
 	"time"
 )
@@ -9,6 +10,18 @@ type responsePacket struct {
 	peer     Packet
 	message  wire.Message
 	complete func(time.Time, bool)
+	dispatch *reliable.Dispatch
+}
+
+func (c *Core) skipObsolete(p responsePacket) bool {
+	if p.dispatch == nil || !p.dispatch.Obsolete() {
+		return false
+	}
+	c.obsoleteQueued.Add(1)
+	if p.complete != nil {
+		p.complete(time.Now(), false)
+	}
+	return true
 }
 
 // One bounded writer prevents a busy data flow from blocking the receive loop.
@@ -20,7 +33,13 @@ func (c *Core) writeLoop() {
 	timer := time.NewTimer(time.Hour)
 	defer timer.Stop()
 	controls, datagrams := 0, 0
+nextPacket:
 	for {
+		select {
+		case <-c.stopWrite:
+			return
+		default:
+		}
 		var packet responsePacket
 		found := false
 		if controls < 8 {
@@ -52,6 +71,9 @@ func (c *Core) writeLoop() {
 			}
 		}
 		for {
+			if c.skipObsolete(packet) {
+				continue nextPacket
+			}
 			delay := limit.take(time.Now())
 			if delay <= 0 {
 				break
@@ -73,6 +95,9 @@ func (c *Core) writeLoop() {
 		case <-c.stopWrite:
 			return
 		default:
+		}
+		if c.skipObsolete(packet) {
+			continue
 		}
 		ok := c.write(packet.peer, packet.message)
 		if packet.complete != nil {

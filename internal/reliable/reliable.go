@@ -33,6 +33,17 @@ type Dispatch struct {
 	Frame  wire.Frame
 	result atomic.Pointer[sendOutcome]
 	wake   func()
+	obsolete atomic.Bool
+}
+
+// Obsolete may be read by the writer while the stream owner acknowledges or
+// closes the flow. A send already in progress cannot be recalled.
+func (d *Dispatch) Obsolete() bool { return d.obsolete.Load() }
+
+func (r *Reliable) CancelQueued() {
+	for _, p := range r.queued {
+		p.dispatch.obsolete.Store(true)
+	}
 }
 
 func (d *Dispatch) Complete(at time.Time, ok bool) {
@@ -218,6 +229,9 @@ func (r *Reliable) acknowledge(p *pending, now time.Time) {
 		return
 	}
 	p.acked = true
+	if p.dispatch != nil {
+		p.dispatch.obsolete.Store(true)
+	}
 	if p.frame.DataKind == 0 {
 		r.acknowledgedBytes += uint64(len(p.frame.Data))
 	}

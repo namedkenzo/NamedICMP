@@ -182,6 +182,7 @@ func (s *session) tcp(conn net.Conn) {
 	}
 	window = min(window, s.core.Config.Window)
 	r := NewReliable(window, time.Duration(s.peer.Message.ResendMS)*time.Millisecond)
+	defer r.CancelQueued()
 	// One reusable read buffer batches up to 32 frames; the receiver grants
 	// byte credit only after it has copied the previous batch into frame storage.
 	credit := make(chan int, 1)
@@ -276,7 +277,7 @@ func (s *session) tcp(conn net.Conn) {
 			lastHB = now
 		}
 		for _, dispatch := range r.QueuedDue(now, wake) {
-			s.core.replyTracked(s.peer, wire.Message{Connection: s.peer.Message.Connection, Key: s.user.Key, ReplyType: -1, Payload: wire.EncodeFrame(dispatch.Frame)}, dispatch.Complete)
+			s.core.replyQueued(s.peer, wire.Message{Connection: s.peer.Message.Connection, Key: s.user.Key, ReplyType: -1, Payload: wire.EncodeFrame(dispatch.Frame)}, dispatch.Complete, dispatch)
 		}
 		wake := min(r.Next(now), time.Second)
 		if !timer.Stop() {
