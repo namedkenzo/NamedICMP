@@ -15,12 +15,25 @@ jobs:
       - run: go mod verify
       - name: Check stability Go formatting
         run: |
-          files=(internal/core/{core,session,writer,dual_transport,receive,receive_test,download_load_test,drain_test}.go internal/reliable/{reliable,reliable_test}.go)
+          files=(internal/core/{core,session,writer,dual_transport,receive,receive_test,download_load_test,drain_test,capacity,capacity_test,admission_stale_test}.go internal/reliable/{reliable,reliable_test}.go)
           gofmt -d "${files[@]}"
           test -z "$(gofmt -l "${files[@]}")"
       - run: go test -race ./...
       - name: Repeat paced lossy download regression
         run: go test ./internal/core -run 'TestDownloadOnlyParallelFlows|TestDispatchTimerStarts' -count=3 -v
+      - name: Verify admission regression fails on v0.5.1
+        run: |
+          git fetch --depth=1 origin cc78881478028570cee350e4b19a346c5e11c132
+          baseline_dir=$(mktemp -d /tmp/namedicmp-admission-baseline.XXXXXX)
+          git archive cc78881478028570cee350e4b19a346c5e11c132 | tar -x -C "$baseline_dir"
+          cp internal/core/admission_stale_test.go "$baseline_dir/internal/core/admission_stale_test.go"
+          set +e
+          (cd "$baseline_dir" && go test ./internal/core -run '^TestSaturatedAdmissionIgnoresLateTCP$' -count=1 -v) >"$baseline_dir/result.log" 2>&1
+          baseline_result=$?
+          set -e
+          cat "$baseline_dir/result.log"
+          test "$baseline_result" -ne 0
+          grep -q 'stale TCP was charged as capacity pressure' "$baseline_dir/result.log"
       - name: Compare the same download harness against v0.5.0
         run: |
           git fetch --depth=1 origin f9553eb6ec81db99a697489641ee0510131936eb
@@ -48,6 +61,7 @@ jobs:
       - run: bash scripts/test_service_network.sh
       - run: bash scripts/test_uninstall_systemd.sh
       - run: python3 scripts/test_network_tuning.py
+      - run: python3 scripts/test_capacity_trial.py
       - run: node --check internal/panel/web/app.js
       - run: node --check internal/panel/web/dashboard.js
       - run: node scripts/test_versions.cjs

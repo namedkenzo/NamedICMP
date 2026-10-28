@@ -18,6 +18,11 @@ provider blocking ICMP:
 - **Client health checks:** one unanswered probe is insufficient evidence that a
   working tunnel should be disconnected. Health checks need bounded retry and
   recovery handling; they must not manufacture successful test results.
+- **Admission checks (v0.5.2):** late TCP ACK/data/CLOSE packets for an already
+  removed flow must not be treated as new opening requests when the flow table
+  is full. Validate an initial CONN before checking limits. A regression fails
+  on v0.5.1 and passes with this ordering; this is not a reproduction of the
+  deployment's entire Speedtest failure.
 
 These are code-level findings and regression scenarios, **not proof of which
 one occurred on a particular VPS**. Identical symptoms can also result from
@@ -70,9 +75,9 @@ failure, without restarting the service between snapshots:
 
 ```bash
 date -u '+%Y-%m-%dT%H:%M:%SZ'
-sudo /opt/namedicmp/namedicmp version
-sudo systemctl show namedicmp -p ActiveState -p NRestarts -p Result -p ExecMainCode -p ExecMainStatus -p MemoryCurrent -p TasksCurrent
-sudo /opt/namedicmp/namedicmp diagnostics
+/opt/namedicmp/namedicmp version
+systemctl show namedicmp -p ActiveState -p NRestarts -p Result -p ExecMainCode -p ExecMainStatus -p MemoryCurrent -p TasksCurrent
+/opt/namedicmp/namedicmp diagnostics
 ```
 
 Compare counter **deltas**, not just non-zero lifetime totals: queue drops,
@@ -82,6 +87,82 @@ disconnected, the test timestamp, and any provider mitigation event. A running
 service does not prove the path is reachable; a historical outbound error does
 not prove the service crashed. Do not share connection links, keys, passwords,
 `state.json`, credential files or private packet payloads.
+
+These commands assume a root shell. If you are not root, use your system's
+privilege mechanism; minimal installations may not have `sudo`.
+
+## Capacity and queue evidence (v0.5.2)
+
+One deployment reported TCP 25/32 and UDP 127/128 for one user, while only
+152/256 global slots were occupied. Its lifetime counters had 125 admission
+events and 14,375 writer-queue events; the core was running and had no recorded
+restart. This indicates **possible per-user pressure**, not a demonstrated leak,
+unique failed-flow count, or measured Internet packet loss. UDP expiry is based
+on inactivity (normally 60 seconds), not a DNS-answer-specific timeout. A busy
+phone can legitimately retain flows for background apps, DNS, games and QUIC.
+
+New counters explain the previous aggregates:
+
+| Counter | Meaning |
+| --- | --- |
+| `session_limit_global` | Valid opening packet rejected at the global flow cap |
+| `session_limit_tcp_user` / `session_limit_udp_user` | Valid opening packet rejected at the relevant user's protocol cap |
+| `session_limit_stopping` | Valid opening packet rejected during shutdown |
+| `tcp_queue_retries` | Local TCP data queue admission failure; reliable delivery retries this, not confirmed network loss |
+| `control_queue_dropped` | Control-packet admission failure |
+| `udp_queue_evicted` | Oldest queued UDP datagram discarded to retain newer traffic |
+| `udp_queue_rejected` | New UDP datagram could not be admitted after the bounded overflow attempt |
+| `busiest_user_tcp_sessions` / `busiest_user_udp_sessions` | Maximum current per-user protocol occupancy, without user identity |
+| `udp_idle_timeouts` / `udp_read_errors` / `udp_write_errors` | UDP expiry/error observations, not all possible closure reasons |
+
+At a quiescent snapshot, `write_queue_dropped` equals the sum of the four queue
+reason counters, and `session_limit_rejected` equals the sum of the four
+admission reasons. Counters are read independently, so an active sample may
+briefly differ. Admission retries can count more than once per requested flow.
+An empty queue **now** does not rule out earlier burst overflow. No queue size,
+UDP preference, UDP idle lifetime or global pacing policy changed in v0.5.2.
+
+### Optional bounded capacity trial
+
+Only use this to distinguish per-user admission pressure from other failure
+paths. It is **not a universal fix** and may increase one user's share of the
+existing resource budget. The helper refuses non-default capacity settings,
+retains the global 256-flow cap and existing packet rate, and never changes the
+firewall, TLS, credentials, endpoint settings or queue sizes.
+
+After updating to v0.5.2, in a root shell:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/namedkenzo/NamedICMP/v0.5.2/scripts/capacity_trial.py -o /tmp/namedicmp-capacity.py
+python3 /tmp/namedicmp-capacity.py
+python3 /tmp/namedicmp-capacity.py --apply
+```
+
+The first invocation is a dry run. Applying creates a private backup beside
+`/etc/namedicmp/config.json` and prints its exact path. Keep that path; do not
+share the file because it can contain secrets. Restart once to load the trial
+(**this disconnects existing tunnels**), reconnect your client, take the root
+diagnostic block above, perform one Speedtest, and take it again immediately:
+
+```bash
+systemctl restart namedicmp
+```
+
+Restore only the two capacity fields, preserving any later edits to unrelated
+settings, using the **exact backup path printed by the helper**:
+
+```bash
+python3 /tmp/namedicmp-capacity.py --restore /etc/namedicmp/.capacity-before-EXACT-NAME.json --apply
+systemctl restart namedicmp
+```
+
+Do not use the example placeholder as a real path. Restore refuses subsequent
+administrator changes to capacity rather than overwriting them. Compare with
+the same client version, route and background workload; because a restart
+clears sessions, also allow normal background flows to accumulate again. A
+successful test immediately after restarting alone is not proof the larger
+per-user limits solved the problem. Compare the **new reason-counter deltas**;
+if UDP eviction/control loss persists, do not keep raising limits blindly.
 
 ## فارسی
 

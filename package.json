@@ -1,6 +1,6 @@
 {
   "name": "namedicmp-development-tests",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "private": true,
   "description": "Optional DOM smoke tests; Node is not needed to run the panel",
   "scripts": {

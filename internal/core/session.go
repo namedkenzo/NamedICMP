@@ -128,6 +128,7 @@ func (s *session) udp(c *outbound.UDP) {
 		case <-s.ctx.Done():
 			return
 		case <-idle.C:
+			s.core.udpIdleTimeout.Add(1)
 			return
 		case p := <-s.in:
 			if !s.updatePeer(p) || len(p.Message.Payload) > MaxUDPDatagram {
@@ -137,12 +138,18 @@ func (s *session) udp(c *outbound.UDP) {
 				return
 			}
 			if err := c.Write(p.Message.Payload); err != nil {
+				if s.ctx.Err() == nil {
+					s.core.udpWriteErrors.Add(1)
+				}
 				return
 			}
 			s.core.payloadUpload.Add(uint64(len(p.Message.Payload)))
 			reset()
 		case r := <-results:
 			if r.err != nil {
+				if s.ctx.Err() == nil {
+					s.core.udpReadErrors.Add(1)
+				}
 				return
 			}
 			if len(r.data) > MaxUDPDatagram {

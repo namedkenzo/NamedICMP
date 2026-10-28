@@ -128,6 +128,9 @@ type Core struct {
 	controlOut, dataOut, udpOutQueue                                                   chan responsePacket
 	writeDone, stopWrite                                                               chan struct{}
 	writeQueueDrops, sessionQueueDrops, sessionLimitDrops, socketWriteErrors           atomic.Uint64
+	queueReasons
+	capacityReasons
+	udpIdleTimeout, udpReadErrors, udpWriteErrors atomic.Uint64
 	outboundDNS, outboundPolicy, outboundTimeout, outboundNetwork, outboundOther       atomic.Uint64
 	stopOnce                                                                           sync.Once
 	credentialsMu                                                                      sync.Mutex
@@ -269,20 +272,6 @@ func (c *Core) Handle(ctx context.Context, p Packet) {
 	c.mu.Lock()
 	s := c.sessions[key]
 	if s == nil {
-		limit := c.Config.MaxUDPPerUser
-		if limit == 0 {
-			limit = 128
-		}
-		userFull := (!m.TCP && c.udpPerUser[u.ID] >= limit) || (m.TCP && c.tcpPerUser[u.ID] >= c.Config.MaxPerUser)
-		if c.stopping || len(c.sessions) >= c.Config.MaxSessions || userFull {
-			c.mu.Unlock()
-			c.dropped.Add(1)
-			c.sessionLimitDrops.Add(1)
-			if m.TCP {
-				c.kick(p)
-			}
-			return
-		}
 		if _, _, err := outbound.SplitTarget(m.Target); err != nil {
 			c.mu.Unlock()
 			c.invalid.Add(1)
@@ -291,9 +280,18 @@ func (c *Core) Handle(ctx context.Context, p Packet) {
 		if m.TCP {
 			f, err := wire.DecodeFrame(m.Payload)
 			if err != nil || f.Kind != 0 || f.ID != 0 || f.DataKind != 1 {
+				// Late ACK/data/CLOSE for an expired stream is not an opening
+				// request. In particular, do not KICK or charge capacity here.
 				c.mu.Unlock()
 				return
 			}
+		}
+		if c.rejectSessionLocked(u.ID, m.TCP) {
+			c.mu.Unlock()
+			if m.TCP {
+				c.kick(p)
+			}
+			return
 		}
 		s = newSession(ctx, c, key, u, p)
 		c.sessions[key] = s
@@ -368,9 +366,13 @@ func (c *Core) replyTracked(p Packet, m wire.Message, complete func(time.Time, b
 	}
 	if queue == c.udpOutQueue {
 		select {
-		case <-queue:
+		case old := <-queue:
 			c.dropped.Add(1)
 			c.writeQueueDrops.Add(1)
+			c.udpQueueEvicted.Add(1)
+			if old.complete != nil {
+				old.complete(time.Now(), false)
+			}
 		default:
 		}
 		select {
@@ -381,6 +383,16 @@ func (c *Core) replyTracked(p Packet, m wire.Message, complete func(time.Time, b
 	}
 	c.dropped.Add(1)
 	c.writeQueueDrops.Add(1)
+	switch queue {
+	case c.controlOut:
+		c.controlQueueDropped.Add(1)
+	case c.udpOutQueue:
+		c.udpQueueRejected.Add(1)
+	default:
+		// Reliable TCP retries failed local admission; this is not evidence
+		// that its payload was lost on the network.
+		c.tcpQueueRetries.Add(1)
+	}
 	if complete != nil {
 		complete(time.Now(), false)
 	}
@@ -427,6 +439,13 @@ func (c *Core) Metrics() map[string]any {
 	c.mu.Lock()
 	n := len(c.sessions)
 	tcp, udp, users, stopping := c.activeTCP, c.activeUDP, c.activeUsers, c.stopping
+	maxTCP, maxUDP := 0, 0
+	for _, count := range c.tcpPerUser {
+		maxTCP = max(maxTCP, count)
+	}
+	for _, count := range c.udpPerUser {
+		maxUDP = max(maxUDP, count)
+	}
 	c.mu.Unlock()
 	var receiveRetries uint64
 	if t, ok := c.transport.(interface{ ReceiveRetries() uint64 }); ok {
@@ -435,6 +454,8 @@ func (c *Core) Metrics() map[string]any {
 	return map[string]any{
 		"receive_retries": receiveRetries, "tcp_idle_timeouts": c.tcpIdleTimeout.Load(), "tcp_handshake_timeouts": c.tcpHandshakeTimeout.Load(), "tcp_decode_errors": c.tcpDecodeErrors.Load(), "tcp_write_errors": c.tcpWriteErrors.Load(), "tcp_completed": c.tcpCompleted.Load(),
 		"sessions": n, "tcp_sessions": tcp, "udp_sessions": udp, "active_users": users, "running": !stopping,
+		"busiest_user_tcp_sessions": maxTCP, "busiest_user_udp_sessions": maxUDP,
+		"udp_idle_timeouts": c.udpIdleTimeout.Load(), "udp_read_errors": c.udpReadErrors.Load(), "udp_write_errors": c.udpWriteErrors.Load(),
 		"payload_upload": c.payloadUpload.Load(), "payload_download": c.payloadDownload.Load(),
 		"max_sessions": c.Config.MaxSessions, "max_sessions_per_user": c.Config.MaxPerUser, "max_udp_sessions_per_user": c.Config.MaxUDPPerUser,
 		"control_queue": len(c.controlOut), "control_queue_capacity": cap(c.controlOut),
@@ -445,6 +466,8 @@ func (c *Core) Metrics() map[string]any {
 		"outbound_errors": c.dialErrors.Load(), "outbound_dns_errors": c.outboundDNS.Load(), "outbound_policy_errors": c.outboundPolicy.Load(),
 		"outbound_timeouts": c.outboundTimeout.Load(), "outbound_network_errors": c.outboundNetwork.Load(), "outbound_other_errors": c.outboundOther.Load(),
 		"write_queue_dropped": c.writeQueueDrops.Load(), "session_queue_dropped": c.sessionQueueDrops.Load(), "session_limit_rejected": c.sessionLimitDrops.Load(),
+		"tcp_queue_retries": c.tcpQueueRetries.Load(), "control_queue_dropped": c.controlQueueDropped.Load(), "udp_queue_evicted": c.udpQueueEvicted.Load(), "udp_queue_rejected": c.udpQueueRejected.Load(),
+		"session_limit_global": c.sessionGlobalDrops.Load(), "session_limit_tcp_user": c.sessionTCPUserDrops.Load(), "session_limit_udp_user": c.sessionUDPUserDrops.Load(), "session_limit_stopping": c.sessionStoppingDrops.Load(),
 		"socket_write_errors": c.socketWriteErrors.Load(), "icmp_packets_per_second": c.Config.ICMPPacketsPerSecond, "icmp_burst_packets": c.Config.ICMPBurstPackets,
 		"oversized_udp": c.oversizedUDP.Load(), "packets_in": c.received.Load(), "packets_out": c.sent.Load(), "dropped": c.dropped.Load(), "rejected": c.invalid.Load(), "state_healthy": c.Store.Fault() == nil,
 	}

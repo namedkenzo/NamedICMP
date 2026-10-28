@@ -1,10 +1,16 @@
-# 0.5.0 — 2026-10-27
+# 0.5.2 — 2026-10-28
 
-- Rename Home to Dashboard and stream real one-second measurements over authenticated WebSocket.
-- Add five-minute payload/interface/packet charts and IPv4/IPv6 path RTT, loss and jitter with explicit measurement scope.
-- Surface active TCP/UDP flows, queue pressure, pacing, storage health, outbound/drop reasons and kernel/interface diagnostics.
-- Keep monitoring shared and bounded; pause hidden views, revoke logged-out streams and label missing/stale data.
-- Preserve tunnel protocol, client applications and installed user/settings data.
+- Ignore stale TCP frames before saturated-table admission checks; retain bounded, isolated new-flow admission.
+- Split queue and capacity counters, surface busiest-user pressure and UDP expiry/error diagnostics.
+- Add an opt-in, backed-up TCP64/UDP192 per-user capacity trial without changing the global256-flow or packet-rate caps.
+- Verify the admission regression against v0.5.1 and test classification, UI labels and safe trial rollback.
+- Preserve installed settings and client versions; deployment-specific Speedtest acceptance remains pending.
+
+# 0.5.1 — 2026-10-27
+
+- Start retransmission timing at socket-write completion, keep download EOF data draining, and retry known transient ICMP receive errors.
+- Add deterministic queue/completion and lossy download regressions; preserve wire compatibility and accounting.
+- Document measured laboratory improvement separately from unresolved deployment-specific failures.
 
 # 0.5.0 — 2026-10-27
 

@@ -2,7 +2,7 @@ name: Build Linux archives
 on:
   workflow_dispatch:
   push:
-    branches: [main, ipv6-settings, fix-ipv6-uninstall, gaming-latency, live-dashboard, fix-speedtest]
+    branches: [main, ipv6-settings, fix-ipv6-uninstall, gaming-latency, live-dashboard, fix-speedtest, fix-capacity-evidence]
     tags: ['v*']
 permissions:
   contents: write
@@ -23,6 +23,7 @@ jobs:
       - run: bash scripts/test_service_network.sh
       - run: bash scripts/test_uninstall_systemd.sh
       - run: python3 scripts/test_network_tuning.py
+      - run: python3 scripts/test_capacity_trial.py
       - run: node scripts/test_versions.cjs
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npm run test:ui
