@@ -1,3 +1,11 @@
+# 0.5.3 — 2026-10-28
+
+- Honor cancellation and the caller's earlier deadline throughout SOCKS5/HTTP proxy negotiation, including SOCKS UDP relay lookup; detach cancellation after a successful handoff.
+- Skip queued retransmissions once their original data is acknowledged, and invalidate queued sends when a stream closes; preserve pacing, payload accounting and protocol compatibility.
+- Accept all valid HTTP CONNECT 2xx responses while preserving buffered tunnel data and rejecting unsuccessful/malformed statuses.
+- Expose avoided obsolete sends separately in diagnostics and Dashboard; add real-socket cancellation, CONNECT response and blocked-writer regressions.
+- Preserve installed users/settings, quotas, rate/capacity defaults and client versions. No deployment-specific Speedtest success claim.
+
 # 0.5.2 — 2026-10-28
 
 - Ignore stale TCP frames before saturated-table admission checks; retain bounded, isolated new-flow admission.

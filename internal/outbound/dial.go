@@ -61,8 +61,10 @@ func Resolve(ctx context.Context, target string, allowPrivate bool) (string, []n
 	}
 	ips, err := net.DefaultResolver.LookupIP(ctx, "ip", h)
 	if err != nil || len(ips) == 0 {
-		if err==nil {err=errors.New("no target addresses")}
-		return "", nil, fmt.Errorf("%w: %w",ErrResolve,err)
+		if err == nil {
+			err = errors.New("no target addresses")
+		}
+		return "", nil, fmt.Errorf("%w: %w", ErrResolve, err)
 	}
 	for _, ip := range ips {
 		if !allowPrivate && !safeIP(ip) {
@@ -243,54 +245,54 @@ func DialTCP(ctx context.Context, o store.Outbound, target string, allowPrivate 
 		}
 	}()
 	err = proxyHandshake(ctx, c, func(context.Context) error {
-	switch o.Kind {
-	case "socks5":
-		if err = socksAuth(c, o); err != nil {
-			return err
-		}
-		if _, err = socksRequest(c, 1, numeric); err != nil {
-			return err
-		}
-	case "http":
-		request := "CONNECT " + numeric + " HTTP/1.1\r\nHost: " + numeric + "\r\n"
-		if o.Username != "" {
-			request += "Proxy-Authorization: Basic " + base64.StdEncoding.EncodeToString([]byte(o.Username+":"+o.Password)) + "\r\n"
-		}
-		request += "\r\n"
-		if err = writeAll(c, []byte(request)); err != nil {
-			return err
-		}
-		r := bufio.NewReaderSize(c, 8192)
-		line, e := limitedLine(r)
-		if e != nil {
-			return e
-		}
-		parts := strings.Fields(line)
-		status := 0
-		if len(parts) >= 2 && len(parts[1]) == 3 {
-			status, _ = strconv.Atoi(parts[1])
-		}
-		if len(parts) < 2 || (parts[0] != "HTTP/1.1" && parts[0] != "HTTP/1.0") || status < 200 || status >= 300 {
-			return errors.New("HTTP CONNECT rejected")
-		}
-		size := len(line)
-		for {
-			line, e = limitedLine(r)
+		switch o.Kind {
+		case "socks5":
+			if err = socksAuth(c, o); err != nil {
+				return err
+			}
+			if _, err = socksRequest(c, 1, numeric); err != nil {
+				return err
+			}
+		case "http":
+			request := "CONNECT " + numeric + " HTTP/1.1\r\nHost: " + numeric + "\r\n"
+			if o.Username != "" {
+				request += "Proxy-Authorization: Basic " + base64.StdEncoding.EncodeToString([]byte(o.Username+":"+o.Password)) + "\r\n"
+			}
+			request += "\r\n"
+			if err = writeAll(c, []byte(request)); err != nil {
+				return err
+			}
+			r := bufio.NewReaderSize(c, 8192)
+			line, e := limitedLine(r)
 			if e != nil {
 				return e
 			}
-			size += len(line)
-			if size > 16384 {
-				return errors.New("proxy headers too large")
+			parts := strings.Fields(line)
+			status := 0
+			if len(parts) >= 2 && len(parts[1]) == 3 {
+				status, _ = strconv.Atoi(parts[1])
 			}
-			if line == "\r\n" || line == "\n" {
-				break
+			if len(parts) < 2 || (parts[0] != "HTTP/1.1" && parts[0] != "HTTP/1.0") || status < 200 || status >= 300 {
+				return errors.New("HTTP CONNECT rejected")
 			}
+			size := len(line)
+			for {
+				line, e = limitedLine(r)
+				if e != nil {
+					return e
+				}
+				size += len(line)
+				if size > 16384 {
+					return errors.New("proxy headers too large")
+				}
+				if line == "\r\n" || line == "\n" {
+					break
+				}
+			}
+			c = &bufferedConn{Conn: c, r: r}
+		default:
+			return errors.New("unsupported outbound")
 		}
-		c = &bufferedConn{Conn: c, r: r}
-	default:
-		return errors.New("unsupported outbound")
-	}
 		return nil
 	})
 	if err != nil {
@@ -441,4 +443,3 @@ func (u *UDP) WatchControl(done func()) {
 	}
 	go func() { var b [1]byte; _, _ = u.control.Read(b[:]); done() }()
 }
-

@@ -24,7 +24,7 @@ import (
 	"namedicmp/internal/store"
 )
 
-const version = "0.5.2"
+const version = "0.5.3"
 
 type credentials struct {
 	Username string `json:"username"`

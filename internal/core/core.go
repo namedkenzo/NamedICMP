@@ -458,7 +458,7 @@ func (c *Core) Metrics() map[string]any {
 	}
 	return map[string]any{
 		"obsolete_queued_packets": c.obsoleteQueued.Load(),
-		"receive_retries": receiveRetries, "tcp_idle_timeouts": c.tcpIdleTimeout.Load(), "tcp_handshake_timeouts": c.tcpHandshakeTimeout.Load(), "tcp_decode_errors": c.tcpDecodeErrors.Load(), "tcp_write_errors": c.tcpWriteErrors.Load(), "tcp_completed": c.tcpCompleted.Load(),
+		"receive_retries":         receiveRetries, "tcp_idle_timeouts": c.tcpIdleTimeout.Load(), "tcp_handshake_timeouts": c.tcpHandshakeTimeout.Load(), "tcp_decode_errors": c.tcpDecodeErrors.Load(), "tcp_write_errors": c.tcpWriteErrors.Load(), "tcp_completed": c.tcpCompleted.Load(),
 		"sessions": n, "tcp_sessions": tcp, "udp_sessions": udp, "active_users": users, "running": !stopping,
 		"busiest_user_tcp_sessions": maxTCP, "busiest_user_udp_sessions": maxUDP,
 		"udp_idle_timeouts": c.udpIdleTimeout.Load(), "udp_read_errors": c.udpReadErrors.Load(), "udp_write_errors": c.udpWriteErrors.Load(),

@@ -27,12 +27,12 @@ type sendOutcome struct {
 }
 
 // Dispatch separates local queue residence from time spent on the network.
-// Only Complete is called by the writer; all Reliable state remains owned by
+// Only Complete and Obsolete are called by the writer; Reliable state is owned by
 // the session goroutine. A queued frame cannot acquire duplicate retry tickets.
 type Dispatch struct {
-	Frame  wire.Frame
-	result atomic.Pointer[sendOutcome]
-	wake   func()
+	Frame    wire.Frame
+	result   atomic.Pointer[sendOutcome]
+	wake     func()
 	obsolete atomic.Bool
 }
 
@@ -40,6 +40,8 @@ type Dispatch struct {
 // closes the flow. A send already in progress cannot be recalled.
 func (d *Dispatch) Obsolete() bool { return d.obsolete.Load() }
 
+// CancelQueued belongs to the stream owner and invalidates outstanding writer
+// tickets on exit. It does not race on the Reliable maps or recall active writes.
 func (r *Reliable) CancelQueued() {
 	for _, p := range r.queued {
 		p.dispatch.obsolete.Store(true)
