@@ -72,7 +72,10 @@ async function availablePort() { const s=net.createServer(); await new Promise(r
   w.eval(`home.core_enabled=true;home.core={...home.core,busiest_user_tcp_sessions:32,max_sessions_per_user:32,busiest_user_udp_sessions:128,max_udp_sessions_per_user:128,tcp_queue_retries:7,udp_queue_evicted:9,session_limit_tcp_user:2};namedDashboard.render()`);
   const pressure=d.querySelector('#pacing-info');
   if(pressure.querySelectorAll('.has-warning').length!==2)throw Error('Per-user capacity warning missing');
-  if(!pressure.textContent.includes('TCP queue admission retries')||!pressure.textContent.includes('UDP oldest-packet evictions')||!pressure.textContent.includes('Per-user TCP rejects'))throw Error('Queue/admission causes not separately labelled');
+  const reasons=d.querySelector('#pressure-info');
+  if(!reasons.textContent.includes('TCP queue admission retries')||!reasons.textContent.includes('UDP oldest-packet evictions')||!reasons.textContent.includes('Per-user TCP rejects'))throw Error('Queue/admission causes not separately labelled');
+  if(d.querySelector('.pressure-details').open)throw Error('Detailed counters should start collapsed');
+  d.querySelector('.pressure-details').open=true;
   d.querySelector('#logout').click();await wait(()=>!d.querySelector('#login').hidden);
   if(errors.length)throw new Error(errors.join('\n'));
   console.log('DOM smoke passed: login, metrics, users, default-off encryption, AES selection, exact connection URI and clipboard copy, outbounds, languages, themes, navigation and logout.');

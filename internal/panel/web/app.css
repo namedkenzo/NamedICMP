@@ -54,6 +54,7 @@ html[dir=rtl] .probe-values strong{text-align:right}
 .dashboard .overview-grid{margin-bottom:20px}.dashboard .system-card dl>div{font-size:11px;padding-block:9px}
 .dashboard .system-card dd{overflow-wrap:anywhere;min-width:0}
 .dashboard .address-card{margin-bottom:20px}
+.pressure-details{border-top:1px solid var(--line-soft);margin-top:14px;padding-top:14px}.pressure-details summary{cursor:pointer;font-size:12px;font-weight:600;line-height:1.7}.pressure-details[open] summary{margin-bottom:12px}
 .kernel-card{padding:22px}.kernel-card summary{cursor:pointer;font-size:13px;font-weight:650;color:var(--text);line-height:1.7}
 .kernel-card[open] summary{margin-bottom:12px}.kernel-grid{display:grid;grid-template-columns:1fr 1fr 1.3fr;gap:26px;margin-top:20px}
 .kernel-grid>div{min-width:0}.kernel-grid h3{font-size:12px;margin-bottom:15px;color:var(--accent)}

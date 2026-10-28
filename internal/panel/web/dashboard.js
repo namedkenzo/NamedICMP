@@ -17,6 +17,7 @@ Object.assign(dictionary.en, {
  tcpQueueRetries:'TCP queue admission retries',controlQueueDrops:'Control queue drops',udpQueueEvicted:'UDP oldest-packet evictions',udpQueueRejected:'UDP new-packet rejects',
  globalFlowRejects:'Global flow-cap rejects',tcpUserRejects:'Per-user TCP rejects',udpUserRejects:'Per-user UDP rejects',stoppingRejects:'Shutdown rejects',
  busiestTCP:'Busiest user · TCP / limit',busiestUDP:'Busiest user · UDP / limit',udpIdleTimeouts:'UDP idle expirations',udpReadErrors:'UDP outbound read errors',udpWriteErrors:'UDP outbound write errors',
+ pressureDetails:'Detailed queue & capacity reasons',
  rxTotal:'Interface received',txTotal:'Interface sent',rxErrors:'RX errors',txErrors:'TX errors',rxDrops:'RX drops',txDrops:'TX drops',
  kernelDiagnostics:'Kernel ICMP counters & read-only network settings',kernelHint:'Host-wide totals since boot. These are not tunnel-only statistics. No firewall or sysctl setting is changed by this dashboard.',networkSettings:'Network settings',
  heapMemory:'Go heap allocated',processMemory:'Process resident memory',goroutines:'Go routines',fileDescriptors:'Open file descriptors',swap:'Swap used',packetsSecond:'packets/s',trafficMeasurement:'Traffic measurement',trafficChart:'Live traffic chart',refreshAt:'Sampled',
@@ -38,6 +39,7 @@ Object.assign(dictionary.fa, {
  tcpQueueRetries:'تلاش دوباره برای ورود TCP به صف',controlQueueDrops:'حذف از صف کنترل',udpQueueEvicted:'حذف قدیمی‌ترین بستهٔ UDP',udpQueueRejected:'رد بستهٔ جدید UDP',
  globalFlowRejects:'رد به‌دلیل سقف کل جریان‌ها',tcpUserRejects:'رد به‌دلیل سقف TCP کاربر',udpUserRejects:'رد به‌دلیل سقف UDP کاربر',stoppingRejects:'رد هنگام توقف هسته',
  busiestTCP:'بیشترین TCP یک کاربر / سقف',busiestUDP:'بیشترین UDP یک کاربر / سقف',udpIdleTimeouts:'انقضای UDP غیرفعال',udpReadErrors:'خطای خواندن خروجی UDP',udpWriteErrors:'خطای نوشتن خروجی UDP',
+ pressureDetails:'جزئیات علت‌های فشار صف و ظرفیت',
  rxTotal:'کل دریافت رابط',txTotal:'کل ارسال رابط',rxErrors:'خطای دریافت',txErrors:'خطای ارسال',rxDrops:'حذف در دریافت',txDrops:'حذف در ارسال',
  kernelDiagnostics:'شمارنده‌های ICMP کرنل و تنظیمات فقط‌خواندنی شبکه',kernelHint:'آمار کل میزبان از زمان روشن‌شدن؛ منحصر به تونل نیست. داشبورد هیچ تنظیم فایروال یا sysctl را تغییر نمی‌دهد.',networkSettings:'تنظیمات شبکه',
  heapMemory:'حافظهٔ تخصیص‌یافتهٔ Go',processMemory:'حافظهٔ مقیم فرایند',goroutines:'روتین‌های Go',fileDescriptors:'فایل‌های باز',swap:'مصرف Swap',packetsSecond:'بسته/ثانیه',trafficMeasurement:'نوع اندازه‌گیری ترافیک',trafficChart:'نمودار زندهٔ ترافیک',refreshAt:'زمان نمونه',
@@ -137,8 +139,11 @@ window.namedDashboard = (()=>{
    ['pacing',available(k.icmp_packets_per_second)?number(k.icmp_packets_per_second)+' '+t('packetsSecond'):'—'],['burst',number(k.icmp_burst_packets)],['udpLimit',enabled?'8 KiB':'—'],
    ['busiestTCP',number(k.busiest_user_tcp_sessions)+' / '+number(k.max_sessions_per_user),available(k.busiest_user_tcp_sessions)&&k.busiest_user_tcp_sessions>=k.max_sessions_per_user],
    ['busiestUDP',number(k.busiest_user_udp_sessions)+' / '+number(k.max_udp_sessions_per_user),available(k.busiest_user_udp_sessions)&&k.busiest_user_udp_sessions>=k.max_udp_sessions_per_user],
-   ['queueDrops',number(k.write_queue_dropped)],['tcpQueueRetries',number(k.tcp_queue_retries)],['controlQueueDrops',number(k.control_queue_dropped)],['udpQueueEvicted',number(k.udp_queue_evicted)],['udpQueueRejected',number(k.udp_queue_rejected)],
-   ['sessionDrops',number(k.session_queue_dropped)],['sessionLimits',number(k.session_limit_rejected)],['globalFlowRejects',number(k.session_limit_global)],['tcpUserRejects',number(k.session_limit_tcp_user)],['udpUserRejects',number(k.session_limit_udp_user)],['stoppingRejects',number(k.session_limit_stopping)],
+   ['queueDrops',number(k.write_queue_dropped)],['sessionDrops',number(k.session_queue_dropped)],['sessionLimits',number(k.session_limit_rejected)]
+  ]);
+  rows('pressure-info',[
+   ['tcpQueueRetries',number(k.tcp_queue_retries)],['controlQueueDrops',number(k.control_queue_dropped)],['udpQueueEvicted',number(k.udp_queue_evicted)],['udpQueueRejected',number(k.udp_queue_rejected)],
+   ['globalFlowRejects',number(k.session_limit_global)],['tcpUserRejects',number(k.session_limit_tcp_user)],['udpUserRejects',number(k.session_limit_udp_user)],['stoppingRejects',number(k.session_limit_stopping)],
    ['udpIdleTimeouts',number(k.udp_idle_timeouts)],['udpReadErrors',number(k.udp_read_errors)],['udpWriteErrors',number(k.udp_write_errors)]
   ]);
   rows('system-info',[['hostname',h.hostname],['os',h.os],['kernel',h.kernel],['architecture',h.architecture],['uptime',number(Math.floor(h.uptime_seconds/86400))+' '+t('days')+' · '+Math.floor(h.uptime_seconds/3600)%24+'h'],['processMemory',amount(h.process_rss)],['heapMemory',amount(h.process_memory)],['swap',amount(h.swap_used)+' / '+amount(h.swap_total)],['goroutines',number(h.goroutines)],['fileDescriptors',number(health.fd_used)+' / '+number(health.fd_limit)]]);
