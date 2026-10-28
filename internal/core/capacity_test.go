@@ -149,6 +149,7 @@ func TestUDPCapacityReturnsAfterCancellation(t *testing.T) {
 			Key: u.Key, Connection: fmt.Sprintf("udp-capacity-%d", i),
 			Target: target, Payload: []byte("UDP"),
 		}}
+	}
 	for i := 0; i < limit; i++ {
 		c.Handle(context.Background(), packet(i))
 		awaitUDP(t, tr, target, []byte("UDP"))

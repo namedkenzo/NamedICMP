@@ -46,6 +46,14 @@ def write_file(fd, raw, info, mode):
         os.fsync(stream.fileno())
 
 
+def sync_directory(path):
+    fd = os.open(path, os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
+
 def replace(path, raw, previous, info):
     fd, name = tempfile.mkstemp(prefix=".capacity-new-", dir=path.parent)
     try:
@@ -54,6 +62,7 @@ def replace(path, raw, previous, info):
         if (current.st_dev, current.st_ino, current.st_mtime_ns) != (info.st_dev, info.st_ino, info.st_mtime_ns) or path.read_bytes() != previous:
             raise ValueError("Configuration changed concurrently; no replacement performed")
         os.replace(name, path)
+        sync_directory(path.parent)
     finally:
         if os.path.exists(name):
             os.unlink(name)
@@ -85,6 +94,8 @@ def trial(config, apply=False, restore=None):
         fd, name = tempfile.mkstemp(prefix=".capacity-before-", suffix=".json", dir=path.parent)
         # The full configuration can contain secrets. Never print its contents.
         write_file(fd, previous, info, 0o600)
+        # Make the backup directory entry durable before replacing config.
+        sync_directory(path.parent)
         backup = Path(name)
     replace(path, (json.dumps(data, indent=2) + "\n").encode(), previous, info)
     return [description, "Backup: " + str(backup),

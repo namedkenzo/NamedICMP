@@ -130,12 +130,12 @@ type Core struct {
 	writeQueueDrops, sessionQueueDrops, sessionLimitDrops, socketWriteErrors           atomic.Uint64
 	queueReasons
 	capacityReasons
-	udpIdleTimeout, udpReadErrors, udpWriteErrors atomic.Uint64
-	outboundDNS, outboundPolicy, outboundTimeout, outboundNetwork, outboundOther       atomic.Uint64
-	stopOnce                                                                           sync.Once
-	credentialsMu                                                                      sync.Mutex
-	pingMu                                                                             sync.Mutex
-	pingBuckets                                                                        map[string]*bucket
+	udpIdleTimeout, udpReadErrors, udpWriteErrors                                atomic.Uint64
+	outboundDNS, outboundPolicy, outboundTimeout, outboundNetwork, outboundOther atomic.Uint64
+	stopOnce                                                                     sync.Once
+	credentialsMu                                                                sync.Mutex
+	pingMu                                                                       sync.Mutex
+	pingBuckets                                                                  map[string]*bucket
 }
 type bucket struct {
 	tokens float64
